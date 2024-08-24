@@ -18,10 +18,6 @@ class ThreadsManager:
             t.start()
             t.join()
 
-    def stop_threads(self):
-        for t in self.threads:
-            t.join()
-
     def _auto_restart(self, target: Callable):
         def wrapped_target(*args, **kwargs):
             while True:

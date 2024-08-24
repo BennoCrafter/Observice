@@ -23,6 +23,7 @@ async def on_startup():
     global status_channel
     destination_channel = bot.get_channel(destination_channel_id)
     status_channel = bot.get_channel(destination_channel_id)
+    print("Setupped Channels")
 
 @listen()
 async def on_ready():
@@ -30,6 +31,7 @@ async def on_ready():
 
 @listen()
 async def on_message_create(ctx):
+    print("Recived a message")
     channel_id = int(ctx.message.channel.id)
     if channel_id == refresh_channel_id:
         rsp = image_management.create_new_image()
