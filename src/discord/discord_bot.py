@@ -1,13 +1,16 @@
+import interactions
+from interactions import (slash_command, SlashContext, listen, slash_option, OptionType,
+                          StringSelectMenu, component_callback, ComponentContext, Embed, File,
+                          Button, ButtonStyle, Timestamp, Intents)
+
 from src.image.image_management import ImageManagement
 from src.config.config_loader import ConfigLoader
-from interactions import (Client, slash_command, SlashContext, slash_option, OptionType,
-                          File, Embed, Button, ButtonStyle, Intents, TextChannel, ComponentContext, listen)
 from src.utils.response import Response
 
 
 config = ConfigLoader()
 token = config.config["discord"]["token"]
-bot = Client(token=token, intents=Intents.GUILDS | Intents.GUILD_MESSAGES | Intents.GUILD_MESSAGE_CONTENT)
+bot = interactions.Client(token=token, intents=Intents.GUILDS | Intents.ALL)
 
 destination_channel_id = config.config["discord"]["destinationChannelId"]
 status_channel_id = config.config["discord"]["statusChannelId"]
