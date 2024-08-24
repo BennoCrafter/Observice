@@ -16,6 +16,7 @@ class ThreadsManager:
     def start_threads(self):
         for t in self.threads:
             t.start()
+            t.join()
 
     def stop_threads(self):
         for t in self.threads:
