@@ -10,7 +10,6 @@ from src.utils.response import Response
 
 config = ConfigLoader()
 token = config.config["discord"]["token"]
-bot = interactions.Client(token=token, intents=Intents.GUILDS | Intents.ALL)
 
 destination_channel_id = config.config["discord"]["destinationChannelId"]
 status_channel_id = config.config["discord"]["statusChannelId"]
@@ -66,6 +65,9 @@ async def clear(ctx: SlashContext, amount: int):
     await ctx.send(f"Cleared {amount} messages!", ephemeral=True)
 
 def start_discord_bot():
+    global bot
+    bot = interactions.Client(token=token, intents=Intents.GUILDS | Intents.ALL)
+
     bot.start()
 
 if __name__ == "__main__":
