@@ -11,7 +11,7 @@ class ImageManagement:
 
     def create_new_image(self) -> Response:
         timestamp = get_current_timestamp()
-        path = self.image_config["imagesDir"] + "/" + timestamp
+        path = self.image_config["imagesDir"] + "/" + timestamp + "." + self.image_config['type']
         image_creation_resp = create_image(images_dir=self.image_config['imagesDir'], image_name=timestamp, image_type=self.image_config['type'], quality=self.image_config['quality'])
 
         if not image_creation_resp.is_success():
