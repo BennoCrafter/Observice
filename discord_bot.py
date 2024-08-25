@@ -13,7 +13,7 @@ async def on_startup():
     global destination_channel
     global status_channel
     destination_channel = bot.get_channel(destination_channel_id)
-    status_channel = bot.get_channel(destination_channel_id)
+    status_channel = bot.get_channel(status_channel_id)
     print("Setupped Channels")
 
 @listen()
@@ -25,11 +25,12 @@ async def on_message_create(ctx):
     print("Recived a message")
     channel_id = int(ctx.message.channel.id)
     if channel_id == refresh_channel_id:
-        rsp = image_management.create_new_image()
-        if not rsp.is_success():
-            print("error. couldnt take image")
+        if ctx.message.content == "refresh":
+            rsp = image_management.create_new_image()
+            if not rsp.is_success():
+                print("error. couldnt take image")
 
-        await send_image(image_management.get_latest_image().source_path)
+            await send_image(image_management.get_latest_image().source_path)
 
 
 async def send_image(image_path):
