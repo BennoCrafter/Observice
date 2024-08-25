@@ -19,11 +19,6 @@ else
     python_version="$1"
 fi
 
-# Check if the Python version is valid
-if ! command -v $python_version &> /dev/null; then
-    echo "Error: $python_version not found!"
-    exit 1
-fi
 
 echo "Starting Observice!"
 $python_version main.py &  # Run main.py in the background
