@@ -10,4 +10,5 @@ else
 fi
 
 echo "Starting Observice!"
-$python_version main.py
+$python_version main.py &
+$python_version discord_bot.py &

@@ -8,15 +8,6 @@ from src.config.config_loader import ConfigLoader
 from src.utils.response import Response
 
 
-config = ConfigLoader()
-token = config.config["discord"]["token"]
-bot = interactions.Client(token=token, intents=Intents.GUILDS | Intents.ALL)
-print(bot)
-destination_channel_id = config.config["discord"]["destinationChannelId"]
-status_channel_id = config.config["discord"]["statusChannelId"]
-refresh_channel_id = config.config["discord"]["refreshChannelId"]
-image_management = ImageManagement(image_config=config.config["imageConfig"])
-
 @listen()
 async def on_startup():
     global destination_channel
@@ -65,8 +56,13 @@ async def clear(ctx: SlashContext, amount: int):
     await ctx.channel.purge(limit=amount)
     await ctx.send(f"Cleared {amount} messages!", ephemeral=True)
 
-def start_discord_bot():
-    bot.start()
 
 if __name__ == "__main__":
-    start_discord_bot()
+    config = ConfigLoader()
+    token = config.config["discord"]["token"]
+    bot = interactions.Client(token=token, intents=Intents.GUILDS | Intents.ALL)
+    destination_channel_id = config.config["discord"]["destinationChannelId"]
+    status_channel_id = config.config["discord"]["statusChannelId"]
+    refresh_channel_id = config.config["discord"]["refreshChannelId"]
+    image_management = ImageManagement(image_config=config.config["imageConfig"])
+    bot.start()
