@@ -11,9 +11,16 @@ check_internet() {
     echo "Checking for an internet connection..."
     while ! ping -q -c 1 -W 1 8.8.8.8 >/dev/null; do
         echo "No internet connection detected. Waiting..."
-        sleep 10  # Wait and recheck after 10 seconds
+        sleep 60  # Wait and recheck after 60 seconds
     done
     echo "Internet connection detected. Continuing execution."
+}
+
+# Function to fetch changes from GitHub
+fetch_changes() {
+    echo "Fetching changes from GitHub..."
+    git fetch --all
+    git pull origin main  # Change 'main' to your default branch if different
 }
 
 # Function to start a script and auto-restart on failure
@@ -47,6 +54,10 @@ else
     echo "Using: $1"
     python_version="$1"
 fi
+
+# Fetch changes from GitHub
+check_internet
+fetch_changes
 
 # Start scripts and auto-restart on failure
 start_script "main.py" $python_version &
