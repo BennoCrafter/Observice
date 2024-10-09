@@ -6,6 +6,10 @@ from interactions import (slash_command, SlashContext, listen, slash_option, Opt
 from src.image.image_management import ImageManagement
 from src.config.config_loader import ConfigLoader
 from src.utils.response import Response
+from src.logger.logger import setup_logger
+from src.config.config_models import ImageConfig
+
+logger = setup_logger(logger_name=__name__, log_file="logs/observice_log.log")
 
 
 @listen()
@@ -14,35 +18,37 @@ async def on_startup():
     global status_channel
     destination_channel = bot.get_channel(destination_channel_id)
     status_channel = bot.get_channel(status_channel_id)
-    print("Setupped Channels")
+    logger.info("Configured channels!")
 
 @listen()
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    logger.info(f"Logged in as {bot.user}")
 
 @listen()
 async def on_message_create(ctx):
-    print("Recived a message")
     channel_id = int(ctx.message.channel.id)
     if channel_id == refresh_channel_id:
         if ctx.message.content == "refresh":
             rsp = image_management.create_new_image()
             if not rsp.is_success():
-                print("error. couldnt take image")
+                logger.error("Error! Could'nt take image")
+                return
 
             await send_image(image_management.get_latest_image().source_path)
 
 
-async def send_image(image_path):
+async def send_image(image_path) -> Response:
     # Ensure destination_channel is available
     if destination_channel:
         await destination_channel.send(file=File(image_path))
         embed = Embed(title="Success", description="Successfully sent the image.", color=0x00FF00)
         await status_channel.send(embed=embed)
 
+        logger.info("Image sent to the destination channel")
         return Response(True, 'Image sent to the destination channel')
     else:
-        return Response(False, 'Destination channel not found')
+        logger.error("Destination channel not found!")
+        return Response(False, 'Destination channel not found!')
 
 
 @slash_command(name="clear", description="Clear messages in the channel")
@@ -65,5 +71,9 @@ if __name__ == "__main__":
     destination_channel_id = config.config["discord"]["destinationChannelId"]
     status_channel_id = config.config["discord"]["statusChannelId"]
     refresh_channel_id = config.config["discord"]["refreshChannelId"]
-    image_management = ImageManagement(image_config=config.config["imageConfig"])
+    # TODO TEMP SOLUTION
+    # dict imageConfig --> dataclass ImageConfig
+    dict_img_config = config.config["imageConfig"]
+    img_config = ImageConfig(images_dir=dict_img_config["imagesDir"] , quality=dict_img_config["quality"] , type=dict_img_config["type"])
+    image_management = ImageManagement(image_config=img_config)
     bot.start()

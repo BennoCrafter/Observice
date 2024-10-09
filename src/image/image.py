@@ -1,8 +1,9 @@
 import os
+from pathlib import Path
 
 class Image:
-    def __init__(self, source_path: str) -> None:
-        self.source_path: str = source_path
+    def __init__(self, source_path: Path) -> None:
+        self.source_path: Path = source_path
 
     def delete_image(self) -> None:
-        os.remove(self.source_path)
+        self.source_path.unlink()

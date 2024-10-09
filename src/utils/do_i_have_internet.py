@@ -4,8 +4,7 @@ from typing import Tuple
 
 def do_i_have_internet() -> Tuple[bool, float]:
     try:
-        start_time = time.time()  # Record the start time
-        # Try to connect to a well-known DNS server (e.g., Google's DNS)
+        start_time = time.time()
         socket.create_connection(('8.8.8.8', 53), timeout=2)
         end_time = time.time()  # Record the end time
 
