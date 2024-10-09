@@ -22,6 +22,9 @@ def auto_restarting():
         time.sleep(60)  # Check every minute
 
 def create_on_startup_image():
+    p = Path("temp")
+    p.mkdir(exist_ok=True)
+
     image_config = ImageConfig(images_dir=Path("temp"), quality="100", type="jpeg")
     resp, temp_img_path = create_image(image_config=image_config, image_name="temp_img")
     time.sleep(3)

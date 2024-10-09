@@ -3,6 +3,8 @@ from interactions import (slash_command, SlashContext, listen, slash_option, Opt
                           StringSelectMenu, component_callback, ComponentContext, Embed, File,
                           Button, ButtonStyle, Timestamp, Intents)
 
+from pathlib import Path
+
 from src.image.image_management import ImageManagement
 from src.config.config_loader import ConfigLoader
 from src.utils.response import Response
@@ -74,6 +76,6 @@ if __name__ == "__main__":
     # TODO TEMP SOLUTION
     # dict imageConfig --> dataclass ImageConfig
     dict_img_config = config.config["imageConfig"]
-    img_config = ImageConfig(images_dir=dict_img_config["imagesDir"] , quality=dict_img_config["quality"] , type=dict_img_config["type"])
+    img_config = ImageConfig(images_dir=Path(dict_img_config["imagesDir"]) , quality=dict_img_config["quality"] , type=dict_img_config["type"])
     image_management = ImageManagement(image_config=img_config)
     bot.start()
