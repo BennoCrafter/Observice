@@ -18,6 +18,7 @@ check_internet() {
 
 # Function to fetch changes from GitHub
 fetch_changes() {
+    check_internet
     echo "Fetching changes from GitHub..."
     git fetch --all
     git pull origin main  # Change 'main' to your default branch if different
@@ -56,7 +57,6 @@ else
 fi
 
 # Fetch changes from GitHub
-check_internet
 fetch_changes
 
 # Start scripts and auto-restart on failure
