@@ -1,4 +1,5 @@
-# Observice: Real-Time Monitoring and Response Service
+# Observice
+## Real-Time Monitoring and Response Service
 ## Overview:
 Observice is a powerful observer service designed to monitor and respond to real-time events from connected devices like Garage Cameras, 3D Printers, and more. With Observice, you can automate actions based on specific triggers, ensuring that your environment is always under control and running smoothly.
 
