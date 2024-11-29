@@ -9,6 +9,8 @@ from src.image.image_management import ImageManagement
 from src.config.config_loader import ConfigLoader
 from src.utils.response import Response
 from src.logger.logger import setup_logger
+from src.config.config_models import ImageConfig
+
 
 logger = setup_logger(logger_name=__name__, log_file="logs/observice_log.log")
 
@@ -30,7 +32,7 @@ async def on_message_create(ctx):
     channel_id = int(ctx.message.channel.id)
     if channel_id == refresh_channel_id:
         if ctx.message.content == "refresh":
-            rsp, image = image_management.create_new_image()
+            rsp, image = await image_management.create_new_image()
             if not rsp.is_success():
                 logger.error("Error! Could'nt take image")
                 return

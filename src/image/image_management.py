@@ -28,8 +28,8 @@ class ImageManagement:
             if file.is_file() and (file.suffix.lower() == f'.{self.image_config.type}'):
                 self.image_queue.add(Image(file))
 
-    def create_new_image(self) -> tuple[Response, Image | None]:
-        image_creation_resp, path = create_image(image_config=self.image_config, image_name=get_current_timestamp())
+    async def create_new_image(self) -> tuple[Response, Image | None]:
+        image_creation_resp, path = await create_image(image_config=self.image_config, image_name=get_current_timestamp())
 
         if not image_creation_resp.is_success():
             return image_creation_resp, None

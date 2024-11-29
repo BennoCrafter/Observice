@@ -2,6 +2,7 @@ import schedule
 import time
 import subprocess
 from pathlib import Path
+import asyncio
 
 from src.config.config_models import ImageConfig
 from src.image.create_image import create_image
@@ -20,20 +21,20 @@ def auto_restarting():
 
     while True:
         schedule.run_pending()
-        time.sleep(60)  # Check every minute
+        time.sleep(120)  # Check every minute
 
-def create_on_startup_image():
+async def create_on_startup_image():
     p = Path("temp")
     p.mkdir(exist_ok=True)
 
     image_config = ImageConfig(images_dir=Path("temp"), quality="100", type="jpeg")
-    resp, temp_img_path = create_image(image_config=image_config, image_name="temp_img")
+    resp, temp_img_path = await create_image(image_config=image_config, image_name="temp_img")
     time.sleep(3)
     temp_img_path.unlink()
 
 
 if __name__ == '__main__':
-    create_on_startup_image()
+    asyncio.run(create_on_startup_image())
     config = ConfigLoader()
 
     # temp solution only
