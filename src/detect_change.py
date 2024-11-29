@@ -10,31 +10,22 @@ from pathlib import Path
 
 logger = setup_logger(logger_name=__name__, log_file="logs/observice_log.log")
 
-async def send_message_to_discord_channel(webhook_url: str, message: str, image_path: Path | None = None):
+async def send_message_to_discord_channel(webhook_url: str, image_path: Path):
     if not webhook_url.startswith("http"):
         logger.error(f"Invalid webhook URL: {webhook_url}")
         return
 
     try:
-        # Prepare the data for the message
-        data = {
-            "content": message  # The message content to send
-        }
-
         # If there's an image path provided, open the image and add it as a file
-        if image_path:
-            with open(image_path, 'rb') as image_file:
-                files = {
-                    'file': (str(image_path), image_file, 'image/jpeg')  # Change mime type based on the image format
-                }
-                # Send the POST request with image attached
-                response = requests.post(webhook_url, data=data, files=files)
-        else:
-            # If no image, just send the message
-            response = requests.post(webhook_url, data=data)
+        with open(image_path, 'rb') as image_file:
+            files = {
+                'file': (str(image_path), image_file, 'image/jpeg')  # Change mime type based on the image format
+            }
+            # Send the POST request with image attached
+            response = requests.post(webhook_url, files=files)
 
         # Check if the response was successful
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(f"Unexpected status code {response.status_code} when sending message to Discord")
         else:
             logger.info("Message sent successfully with image!")
