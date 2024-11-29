@@ -35,7 +35,7 @@ async def change_detector_loop():
     webhook = config.config["discord"]["webhook"]
 
     while True:
-        await asyncio.sleep(60)
+        await asyncio.sleep(10)
 
         prev_image = im.get_latest_image()
         response, image = im.create_new_image()
