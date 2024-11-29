@@ -74,5 +74,8 @@ if __name__ == "__main__":
     refresh_channel_id = config.config["discord"]["refreshChannelId"]
     # TODO TEMP SOLUTION
     # dict imageConfig --> dataclass ImageConfig
-    image_management = ImageManagement()
+    dict_img_config = config.config["imageConfig"]
+    img_config = ImageConfig(images_dir=Path(dict_img_config["imagesDir"]) , quality=dict_img_config["quality"] , type=dict_img_config["type"])
+    image_management = ImageManagement(image_config=img_config)
+
     bot.start()

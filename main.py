@@ -10,7 +10,6 @@ from src.config.config_loader import ConfigLoader
 from src.image.image_management import ImageManagement
 from src.detect_change import change_detector_loop
 
-
 def restart():
     subprocess.call(["sudo", "reboot"])
 

@@ -4,3 +4,4 @@ waitress==3.0.0
 pyyaml==6.0.1
 schedule
 scikit-image
+requests
