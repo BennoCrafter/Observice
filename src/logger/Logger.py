@@ -2,8 +2,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 
-from src.utils.response import Response
-
 
 def setup_logger(logger_name, log_file, level=logging.INFO):
     """Set up a logger with a specific name, log file, and log level."""

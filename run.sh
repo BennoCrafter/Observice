@@ -17,11 +17,13 @@ check_internet() {
 }
 
 # Function to fetch changes from GitHub
-fetch_changes() {
+fetch_changes_and_update_requirements() {
     check_internet
     echo "Fetching changes from GitHub..."
     git fetch --all
     git pull origin main  # Change 'main' to your default branch if different
+
+    $python_version -m pip install -r "assets/requirements.txt"
 }
 
 # Function to start a script and auto-restart on failure

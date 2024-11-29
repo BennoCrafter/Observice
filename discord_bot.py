@@ -9,7 +9,6 @@ from src.image.image_management import ImageManagement
 from src.config.config_loader import ConfigLoader
 from src.utils.response import Response
 from src.logger.logger import setup_logger
-from src.config.config_models import ImageConfig
 
 logger = setup_logger(logger_name=__name__, log_file="logs/observice_log.log")
 
@@ -31,7 +30,7 @@ async def on_message_create(ctx):
     channel_id = int(ctx.message.channel.id)
     if channel_id == refresh_channel_id:
         if ctx.message.content == "refresh":
-            rsp = image_management.create_new_image()
+            rsp, image = image_management.create_new_image()
             if not rsp.is_success():
                 logger.error("Error! Could'nt take image")
                 return
@@ -62,7 +61,7 @@ async def send_image(image_path) -> Response:
     opt_type=OptionType.INTEGER
 )
 async def clear(ctx: SlashContext, amount: int):
-    await ctx.channel.purge(limit=amount)
+    await ctx.channel.purge(deletion_limit=amount)
     await ctx.send(f"Cleared {amount} messages!", ephemeral=True)
 
 
@@ -75,7 +74,5 @@ if __name__ == "__main__":
     refresh_channel_id = config.config["discord"]["refreshChannelId"]
     # TODO TEMP SOLUTION
     # dict imageConfig --> dataclass ImageConfig
-    dict_img_config = config.config["imageConfig"]
-    img_config = ImageConfig(images_dir=Path(dict_img_config["imagesDir"]) , quality=dict_img_config["quality"] , type=dict_img_config["type"])
-    image_management = ImageManagement(image_config=img_config)
+    image_management = ImageManagement()
     bot.start()

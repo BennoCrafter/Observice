@@ -2,4 +2,5 @@ discord-py-interactions==5.11.0
 flask==3.0.3
 waitress==3.0.0
 pyyaml==6.0.1
-schedule==
+schedule
+scikit-image
