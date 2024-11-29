@@ -58,7 +58,7 @@ async def change_detector_loop():
         logger.info(f"Took image for change detector. Similarity: {similarity}")
         if changed:
             logger.info("Detected a change! Sending image...")
-            await send_message_to_discord_channel(webhook, "update_change_detector", image.source_path)
+            await send_message_to_discord_channel(webhook, image.source_path)
 
 
 if __name__ == "__main__":
