@@ -59,7 +59,7 @@ else
 fi
 
 # Fetch changes from GitHub
-fetch_changes
+fetch_changes_and_update_requirements
 
 # Start scripts and auto-restart on failure
 start_script "main.py" $python_version &
