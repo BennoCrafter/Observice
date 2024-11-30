@@ -21,7 +21,7 @@ def auto_restarting():
 
     while True:
         schedule.run_pending()
-        time.sleep(120)  # Check every minute
+        time.sleep(60)  # Check every minute
 
 async def create_on_startup_image():
     p = Path("temp")
