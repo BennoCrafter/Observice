@@ -21,7 +21,10 @@ async def on_startup():
     global status_channel
     destination_channel = bot.get_channel(destination_channel_id)
     status_channel = bot.get_channel(status_channel_id)
-    logger.info("Configured channels!")
+    if destination_channel is not None:
+        logger.info("Configured channels!")
+    else:
+        logger.error("Could'nt find destination channel!")
 
 @listen()
 async def on_ready():
@@ -33,20 +36,17 @@ async def on_message_create(ctx):
     if channel_id == refresh_channel_id:
         if ctx.message.content == "refresh":
             rsp, image = await image_management.create_new_image()
-            if not rsp.is_success():
+            if not rsp.is_success() or image is None:
                 logger.error("Error! Could'nt take image")
                 return
 
-            await send_image(image_management.get_latest_image().source_path)
+            await send_image(image.source_path)
 
 
-async def send_image(image_path) -> Response:
+async def send_image(image_path: Path) -> Response:
     # Ensure destination_channel is available
     if destination_channel:
         await destination_channel.send(file=File(image_path))
-        embed = Embed(title="Success", description="Successfully sent the image.", color=0x00FF00)
-        await status_channel.send(embed=embed)
-
         logger.info("Image sent to the destination channel")
         return Response(True, 'Image sent to the destination channel')
     else:

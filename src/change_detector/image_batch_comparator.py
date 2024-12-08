@@ -19,7 +19,7 @@ class ImageBatchComparator:
         circle_radius = 5
         left_up_point = (circle_center_x - circle_radius, circle_center_y - circle_radius)
         right_down_point = (circle_center_x + circle_radius, circle_center_y + circle_radius)
-        self. circle_bbox = [left_up_point, right_down_point]
+        self.circle_bbox = [left_up_point, right_down_point]
 
     @staticmethod
     def all_files(directory, file_suffix='jpeg'):

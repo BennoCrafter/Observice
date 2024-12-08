@@ -2,7 +2,7 @@ from src.image.image import Image
 
 
 class ImageQueue:
-    def __init__(self, images: list[Image]=[], max_queue_length=10) -> None:
+    def __init__(self, images: list[Image]=[], max_queue_length: int=10) -> None:
         self.images = images
         self.max_queue_length: int = max_queue_length
 
