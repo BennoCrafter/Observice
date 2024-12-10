@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     threads_manager = ThreadsManager()
     threads_manager.add_new_thread(target=auto_restarting, name="Auto restarting at 4 am.")
-    threads_manager.add_new_thread(target=change_detector_loop, name="Change detector")
+    threads_manager.add_new_thread(target=change_detector_loop, kwargs={"image_sender": DiscordImageSender()}, name="Change detector")
     threads_manager.add_new_thread(target=DiscordImageReceiver(image_sender = DiscordImageSender()).loop, name="Discord image receiver")
 
     threads_manager.start_threads()

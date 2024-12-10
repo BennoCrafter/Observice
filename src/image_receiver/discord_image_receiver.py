@@ -44,12 +44,13 @@ class DiscordImageReceiver(ImageReceiver):
 
         self.checked_messages.append(msg)
 
+        logger.info(f"Received refresh message from {msg.author}. Taking picture...")
         return True
 
     async def process(self):
         resp, image = await self.im.create_new_image()
         if image is None or not resp.is_success():
-            logger.error("Could'nt take image for discord image receiver!")
+            logger.error("Could not take image for discord image receiver!")
             return
 
         await self.image_sender.send_image(image.source_path, webhook=self.webhook)

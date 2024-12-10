@@ -12,3 +12,6 @@ image_config:
 server_config:
   url: http://localhost
   port: 8000
+
+logger_config:
+  show_logs_in_server: true

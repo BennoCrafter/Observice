@@ -1,42 +1,18 @@
 import asyncio
 
-import requests
 from src.image.image_management import ImageManagement
 from src.change_detector.image_comparator import ImageComparator
+from src.image_sender.image_sender import ImageSender
 from src.logger.logger import setup_logger
-from pathlib import Path
 from src.config import CONFIG
 
 
 logger = setup_logger()
 
-async def send_message_to_discord_channel(webhook_url: str, image_path: Path):
-    if not webhook_url.startswith("http"):
-        logger.error(f"Invalid webhook URL: {webhook_url}")
-        return
-
-    try:
-        # If there's an image path provided, open the image and add it as a file
-        with open(image_path, 'rb') as image_file:
-            files = {
-                'file': (str(image_path), image_file, 'image/jpeg')  # Change mime type based on the image format
-            }
-            # Send the POST request with image attached
-            response = requests.post(webhook_url, files=files)
-
-        # Check if the response was successful
-        if response.status_code != 200:
-            logger.error(f"Unexpected status code {response.status_code} when sending message to Discord")
-        else:
-            logger.info("Message sent successfully with image!")
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error sending message to Discord: {e}")
-
 def minutes(sec):
     return sec * 60
 
-async def change_detector_loop():
+async def change_detector_loop(image_sender: ImageSender):
     ic = ImageComparator()
     im = ImageManagement()
     webhook = CONFIG.discord_config.webhook_url
@@ -57,8 +33,4 @@ async def change_detector_loop():
         # logger.debug(f"Took image for change detector. Similarity: {similarity}")
         if changed:
             logger.info("Detected a change! Sending image...")
-            await send_message_to_discord_channel(webhook, image.source_path)
-
-
-if __name__ == "__main__":
-    asyncio.run(change_detector_loop())
+            await image_sender.send_image(image.source_path, webhook=webhook)
