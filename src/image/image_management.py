@@ -1,4 +1,4 @@
-from src.config.config_models import ImageConfig
+from src.config.models.image_config import ImageConfig
 from src.image.image import Image
 from src.image.create_image import create_image
 from src.utils.get_current_timestamp import get_current_timestamp

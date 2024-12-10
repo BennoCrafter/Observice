@@ -1,0 +1,14 @@
+discord_config:
+  token: ""
+  destination_channel_id: 123
+  receiver_channel_id: 123
+  webhook_url: ""
+
+image_config:
+  images_dir: "SavedImages"
+  quality: 100
+  type: jpeg
+
+server_config:
+  url: http://localhost
+  port: 8000

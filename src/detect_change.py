@@ -4,11 +4,11 @@ import requests
 from src.image.image_management import ImageManagement
 from src.change_detector.image_comparator import ImageComparator
 from src.logger.logger import setup_logger
-from src.config.config_loader import ConfigLoader
 from pathlib import Path
+from src.config import CONFIG
 
 
-logger = setup_logger(logger_name=__name__, log_file="logs/observice_log.log")
+logger = setup_logger()
 
 async def send_message_to_discord_channel(webhook_url: str, image_path: Path):
     if not webhook_url.startswith("http"):
@@ -39,8 +39,7 @@ def minutes(sec):
 async def change_detector_loop():
     ic = ImageComparator()
     im = ImageManagement()
-    config = ConfigLoader()
-    webhook = config.config["discord"]["webhook"]
+    webhook = CONFIG.discord_config.webhook_url
 
     while True:
         await asyncio.sleep(minutes(1))
@@ -52,10 +51,10 @@ async def change_detector_loop():
             logger.error("Could'nt take image for change detector!")
             continue
 
-        similarity = ic.similarity(prev_image.source_path, image.source_path)
+        # similarity = ic.similarity(prev_image.source_path, image.source_path)
         changed = ic.changed(prev_image.source_path, image.source_path)
 
-        logger.info(f"Took image for change detector. Similarity: {similarity}")
+        # logger.debug(f"Took image for change detector. Similarity: {similarity}")
         if changed:
             logger.info("Detected a change! Sending image...")
             await send_message_to_discord_channel(webhook, image.source_path)

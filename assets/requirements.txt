@@ -5,3 +5,4 @@ pyyaml==6.0.1
 schedule
 scikit-image
 requests
+dacite

@@ -1,0 +1,6 @@
+2024-12-10 16:44:31,009 - __main__ - INFO - Creating startup image
+2024-12-10 16:44:38,013 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-10 16:44:38,014 - src.threads_manager - INFO - Thread "Change detector" started.
+2024-12-10 16:44:38,015 - src.threads_manager - INFO - Thread "Discord image receiver" started.
+2024-12-10 16:44:38,360 - src.image_receiver.discord_image_receiver - ERROR - Failed to fetch messages: 401 - {"message": "401: Unauthorized", "code": 0}
+2024-12-10 16:44:38,360 - src.image_receiver.discord_image_receiver - ERROR - Could'nt get latest message from channel 1227853714786877460

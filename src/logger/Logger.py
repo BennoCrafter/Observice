@@ -1,29 +1,56 @@
-import logging
-from logging.handlers import RotatingFileHandler
+from typing import Optional
+
 import os
+import inspect
+from pathlib import Path
+
+import logging
+from src.logger.server_logging_handler import ServerLoggingHandler
+from logging.handlers import RotatingFileHandler
+
+# from src.config import CONFIG
 
 
-def setup_logger(logger_name, log_file, level=logging.INFO):
-    """Set up a logger with a specific name, log file, and log level."""
+def setup_logger(logger_name: str | None = None, log_file: str | Path = "logs/observice_log", level: int = logging.INFO, server_url: Optional[str] = None) -> logging.Logger:
+    """
+    Sets up a logger to log to a file, console, and send logs to a server.
+    """
+    if logger_name is None:
+        logger_name = inspect.stack()[1].frame.f_globals['__name__']
 
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
 
+    # Ensure the logger isn't set up multiple times
     if not logger.hasHandlers():
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-        handler = RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=5)
-        handler.setLevel(level)
+        # Create log directory if it doesn't exist
+        log_file = Path(log_file)
+        if log_file.parent != Path('.'):
+            os.makedirs(log_file.parent, exist_ok=True)
 
+        # Rotating file handler
+        file_handler = RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=5)
+        file_handler.setLevel(level)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(level)
-
-        # Define the log format
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
-
-        logger.addHandler(handler)
         logger.addHandler(console_handler)
 
+        # Server logging handler (if server_url is provided)
+        if server_url is not None:
+            server_handler = ServerLoggingHandler(server_url)
+            server_handler.setLevel(level)
+            server_handler.setFormatter(formatter)
+            logger.addHandler(server_handler)
+
     return logger
+
+if __name__ == "__main__":
+    logger = setup_logger("test_logger", Path("test.log"), server_url="http://localhost:8000/api/logs")
+    logger.info("Test log message")

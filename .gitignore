@@ -1,3 +1,8 @@
+# Observice Related
+SavedImages/
+.DS_Store
+assets/config.yaml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
