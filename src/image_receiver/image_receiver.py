@@ -1,6 +1,7 @@
 from abc import ABC
 import asyncio
 from src.image_sender.image_sender import ImageSender
+from src.config import CONFIG
 
 
 class ImageReceiver(ABC):
@@ -18,4 +19,4 @@ class ImageReceiver(ABC):
             if self.check():
                 await self.process()
             else:
-                await asyncio.sleep(5)
+                await asyncio.sleep(CONFIG.image_receiver.refresh_rate)

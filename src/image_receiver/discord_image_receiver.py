@@ -23,10 +23,10 @@ class DiscordImageReceiver(ImageReceiver):
         super().__init__(image_sender)
 
         self.im = ImageManagement()
-        self.webhook = CONFIG.discord_config.webhook_url
-        self.destination_channel_id = CONFIG.discord_config.destination_channel_id
-        self.receiver_channel_id = CONFIG.discord_config.receiver_channel_id
-        self.token = CONFIG.discord_config.token
+        self.webhook = CONFIG.discord.webhook_url
+        self.destination_channel_id = CONFIG.discord.destination_channel_id
+        self.receiver_channel_id = CONFIG.discord.receiver_channel_id
+        self.token = CONFIG.discord.token
         self.checked_messages: list[DiscordMessage] = []
 
     def check(self) -> bool:

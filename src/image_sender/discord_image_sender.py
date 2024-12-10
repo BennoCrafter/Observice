@@ -3,8 +3,15 @@ from pathlib import Path
 from src.utils.response import Response
 from src.logger.logger import setup_logger
 import requests
+from src.config import CONFIG
 
 logger = setup_logger()
+
+def format_users(listening_users: list[int]) -> str:
+    s = ""
+    for ls in listening_users:
+        s += f"<@{ls}> "
+    return s
 
 
 class DiscordImageSender(ImageSender):
@@ -25,7 +32,7 @@ class DiscordImageSender(ImageSender):
                     }
 
                     data = {
-                        'content': "<@773082338162507776>"
+                        'content': f"{format_users(CONFIG.discord.listening_users)}"
                     }
 
                     response = requests.post(webhook, files=files, data=data)

@@ -9,16 +9,14 @@ from src.config import CONFIG
 
 logger = setup_logger()
 
-def minutes(sec):
-    return sec * 60
 
 async def change_detector_loop(image_sender: ImageSender):
     ic = ImageComparator()
     im = ImageManagement()
-    webhook = CONFIG.discord_config.webhook_url
+    webhook = CONFIG.discord.webhook_url
 
     while True:
-        await asyncio.sleep(minutes(1))
+        await asyncio.sleep(CONFIG.change_detector.refresh_rate)
 
         prev_image = im.get_latest_image()
         response, image = await im.create_new_image()

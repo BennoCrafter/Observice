@@ -1,17 +1,24 @@
-discord_config:
+discord:
   token: ""
   destination_channel_id: 123
   receiver_channel_id: 123
   webhook_url: ""
+  listening_users: [] # (list of user ids)
 
-image_config:
+image:
   images_dir: "SavedImages"
   quality: 100
   type: jpeg
 
-server_config:
+server:
   url: http://localhost
   port: 8000
 
-logger_config:
+logger:
   show_logs_in_server: true
+
+change_detector:
+  refresh_rate: 60 # (in seconds)
+
+image_receiver:
+  refresh_rate: 5 # (in seconds)

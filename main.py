@@ -45,7 +45,7 @@ async def create_on_startup_image():
 if __name__ == '__main__':
     asyncio.run(create_on_startup_image())
 
-    image_management = ImageManagement(image_config=CONFIG.image_config)
+    image_management = ImageManagement(image_config=CONFIG.image)
 
     threads_manager = ThreadsManager()
     threads_manager.add_new_thread(target=auto_restarting, name="Auto restarting at 4 am.")
