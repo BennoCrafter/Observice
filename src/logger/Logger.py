@@ -5,18 +5,22 @@ import inspect
 from pathlib import Path
 
 import logging
+from src.config.models.server_url_config import ServerURLConfig
 from src.logger.server_logging_handler import ServerLoggingHandler
 from logging.handlers import RotatingFileHandler
 
-# from src.config import CONFIG
+from src.config import CONFIG
 
 
-def setup_logger(logger_name: str | None = None, log_file: str | Path = "logs/observice_log", level: int = logging.INFO, server_url: Optional[str] = None) -> logging.Logger:
+def setup_logger(logger_name: str | None = None, log_file: str | Path = "logs/observice_log", level: int = logging.INFO, server_url: Optional[ServerURLConfig] = None) -> logging.Logger:
     """
     Sets up a logger to log to a file, console, and send logs to a server.
     """
     if logger_name is None:
         logger_name = inspect.stack()[1].frame.f_globals['__name__']
+
+    if CONFIG.logger.show_logs_in_server:
+        server_url = CONFIG.server.url
 
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
@@ -50,7 +54,3 @@ def setup_logger(logger_name: str | None = None, log_file: str | Path = "logs/ob
             logger.addHandler(server_handler)
 
     return logger
-
-if __name__ == "__main__":
-    logger = setup_logger("test_logger", Path("test.log"), server_url="http://localhost:8000/api/logs")
-    logger.info("Test log message")

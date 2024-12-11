@@ -11,8 +11,10 @@ image:
   type: jpeg
 
 server:
-  url: http://localhost
-  port: 8000
+  url:
+    base: http://home.local:8000/observice
+    logs_api_endpoint: /api/logs
+    logs_endpoint: /logs
 
 logger:
   show_logs_in_server: true

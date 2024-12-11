@@ -9,9 +9,9 @@ def is_url_reachable(url: str) -> Response:
     :return: True if the URL is reachable, False otherwise.
     """
     try:
-        response = requests.head(url, timeout=5)  # Use HEAD for faster response
-        if response.status_code == 202:
-            return Response(True, "202 Accepted")
+        response = requests.get(f"{url}")
+        if response.status_code == 200:
+            return Response(True, "200 Accepted")
         else:
             return Response(False, f"Status code: {response.status_code}: {response.reason}")
     except requests.ConnectionError:

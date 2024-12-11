@@ -1,5 +1,6 @@
 import requests
 import logging
+from src.config.models.server_url_config import ServerURLConfig
 from src.utils.is_url_reachable import is_url_reachable
 from src.utils.response import Response
 
@@ -7,10 +8,10 @@ class ServerLoggingHandler(logging.Handler):
     """
     Custom logging handler to send log records to a server.
     """
-    def __init__(self, server_url):
+    def __init__(self, server_url: ServerURLConfig):
         super().__init__()
         self.server_url = server_url
-        self.is_reachable: Response = is_url_reachable(server_url)
+        self.is_reachable: Response = is_url_reachable(server_url.base)
 
     def emit(self, record):
         if not self.is_reachable.is_success():
@@ -28,8 +29,7 @@ class ServerLoggingHandler(logging.Handler):
             }
             headers = {"Content-Type": "application/json"}
 
-            # Send data to the server
-            response = requests.post(self.server_url, json=data, headers=headers)
-            response.raise_for_status()  # Raise an error for HTTP issues
+            response = requests.post(self.server_url.logs_api_endpoint, json=data, headers=headers)
+            response.raise_for_status()
         except Exception as e:
             print(f"Failed to send log to server: {e}")
