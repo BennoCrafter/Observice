@@ -1,12 +1,14 @@
 import asyncio
+from pathlib import Path
+
 from src.config.models.image_config import ImageConfig
 from src.logger.logger import setup_logger
 from src.utils.response import Response
-from pathlib import Path
 
 logger = setup_logger()
 
 # logger.warn(f"Capture image: Warning: Wrong image type. '{image_type}' is not a valid format. Using jpeg instead.")
+
 
 async def create_image(image_config: ImageConfig, image_name: str) -> tuple[Response, Path]:
     img_path = Path(image_config.images_dir / (image_name + "." + image_config.type))
@@ -19,7 +21,7 @@ async def create_image(image_config: ImageConfig, image_name: str) -> tuple[Resp
         process = await asyncio.create_subprocess_shell(
             command,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
         )
 
         # Wait for the command to complete and get the output
@@ -34,4 +36,7 @@ async def create_image(image_config: ImageConfig, image_name: str) -> tuple[Resp
             return Response(success=False, message=f"Error capturing image: {error_message}"), img_path
 
     except Exception as e:
-        return Response(success=False, message=f"Error capturing image. Please ensure that fswebcam is installed. ({e})"), img_path
+        return Response(
+            success=False,
+            message=f"Error capturing image. Please ensure that fswebcam is installed. ({e})",
+        ), img_path

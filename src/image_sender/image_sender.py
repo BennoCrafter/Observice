@@ -1,7 +1,8 @@
-from pathlib import Path
 from abc import ABC
+from pathlib import Path
 
 from src.utils.response import Response
+
 
 class ImageSender(ABC):
     def __init__(self):

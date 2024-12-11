@@ -1,9 +1,11 @@
-from src.image_sender.image_sender import ImageSender
 from pathlib import Path
-from src.utils.response import Response
-from src.logger.logger import setup_logger
+
 import requests
+
 from src.config import CONFIG
+from src.image_sender.image_sender import ImageSender
+from src.logger.logger import setup_logger
+from src.utils.response import Response
 
 logger = setup_logger()
 
@@ -12,7 +14,6 @@ def format_users(listening_users: list[int]) -> str:
     for ls in listening_users:
         s += f"<@{ls}> "
     return s
-
 
 class DiscordImageSender(ImageSender):
     async def send_image(self, image_path: Path | str, **kwargs) -> Response:

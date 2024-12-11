@@ -1,8 +1,10 @@
-import yaml
+from dataclasses import fields
 from pathlib import Path
 from typing import Any
+
+import yaml
+
 from src.config.models.config import Config
-from dataclasses import fields
 
 
 def load_config(file_path: Path) -> Config:
