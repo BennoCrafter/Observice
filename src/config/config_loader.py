@@ -25,8 +25,10 @@ def from_dict(data_class, data: dict) -> Any:
             if hasattr(field_type, "__dataclass_fields__"):
                 field_value = from_dict(field_type, field_value)
 
-            if field_type == Path and isinstance(field_value, str):
-                field_value = Path(field_value)
+            if not isinstance(field_type, str) and isinstance(field_value, str):
+                field_value = field_type(field_value)
+            else:
+                field_value = field_value
 
             field_values[field_name] = field_value
         else:

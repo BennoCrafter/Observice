@@ -29,7 +29,7 @@ class ServerLoggingHandler(logging.Handler):
             }
             headers = {"Content-Type": "application/json"}
 
-            response = requests.post(self.server_url.logs_api_endpoint, json=data, headers=headers)
+            response = requests.post(f"{self.server_url.base}{self.server_url.logs_api_endpoint}", json=data, headers=headers)
             response.raise_for_status()
         except Exception as e:
             print(f"Failed to send log to server: {e}")
