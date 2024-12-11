@@ -15,7 +15,7 @@ async def create_image(image_config: ImageConfig, image_name: str) -> tuple[Resp
 
     # Build the command for fswebcamw
     command = f"fswebcam --{image_config.type} {image_config.quality} -S 2 --save {img_path}"
-    command = f"imagesnap -w 2 {img_path}"
+    # command = f"imagesnap -w 2 {img_path}"
     try:
         # Run the command asynchronously and wait for it to finish
         process = await asyncio.create_subprocess_shell(
