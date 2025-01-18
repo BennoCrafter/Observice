@@ -1,30 +1,32 @@
-2024-12-10 16:44:31,009 - __main__ - INFO - Creating startup image
-2024-12-10 16:44:38,013 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
-2024-12-10 16:44:38,014 - src.threads_manager - INFO - Thread "Change detector" started.
-2024-12-10 16:44:38,015 - src.threads_manager - INFO - Thread "Discord image receiver" started.
-2024-12-10 16:44:38,360 - src.image_receiver.discord_image_receiver - ERROR - Failed to fetch messages: 401 - {"message": "401: Unauthorized", "code": 0}
-2024-12-10 16:44:38,360 - src.image_receiver.discord_image_receiver - ERROR - Could'nt get latest message from channel 1227853714786877460
-2024-12-10 16:46:58,014 - __main__ - INFO - Creating startup image
-2024-12-10 16:47:04,708 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
-2024-12-10 16:47:04,710 - src.threads_manager - INFO - Thread "Change detector" started.
-2024-12-10 16:47:04,710 - src.threads_manager - INFO - Thread "Discord image receiver" started.
-2024-12-10 16:47:25,009 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
-2024-12-10 20:16:20,487 - __main__ - INFO - Creating startup image
-2024-12-10 20:16:27,304 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
-2024-12-10 20:16:27,305 - src.threads_manager - INFO - Thread "Change detector" started.
-2024-12-10 20:16:27,305 - src.threads_manager - INFO - Thread "Discord image receiver" started.
-2024-12-10 20:17:31,491 - src.detect_change - INFO - Detected a change! Sending image...
-2024-12-10 20:17:32,183 - src.detect_change - INFO - Message sent successfully with image!
-2024-12-10 20:24:04,848 - __main__ - INFO - Creating startup image
-2024-12-10 20:24:11,362 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
-2024-12-10 20:24:11,365 - src.threads_manager - INFO - Thread "Change detector" started.
-2024-12-10 20:24:11,366 - src.threads_manager - INFO - Thread "Discord image receiver" started.
-2024-12-10 20:25:15,328 - src.detect_change - INFO - Detected a change! Sending image...
-2024-12-10 20:25:15,855 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
-2024-12-10 20:25:47,873 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
-2024-12-10 20:28:08,395 - __main__ - INFO - Creating startup image
-2024-12-10 20:28:15,113 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
-2024-12-10 20:28:15,115 - src.threads_manager - INFO - Thread "Change detector" started.
-2024-12-10 20:28:15,116 - src.threads_manager - INFO - Thread "Discord image receiver" started.
-2024-12-10 20:28:32,018 - src.image_receiver.discord_image_receiver - INFO - Received refresh message from jobawue. Taking picture...
-2024-12-10 20:28:35,850 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
+2024-12-11 08:42:03,978 - __main__ - INFO - Creating startup image
+2024-12-11 10:14:10,857 - __main__ - INFO - Creating startup image
+2024-12-11 10:14:17,300 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-11 10:14:17,301 - src.threads_manager - INFO - Thread "Change detector" started.
+2024-12-11 10:14:17,301 - src.threads_manager - INFO - Thread "Discord image receiver" started.
+2024-12-11 10:41:10,976 - __main__ - INFO - Creating startup image
+2024-12-11 10:41:51,998 - __main__ - INFO - Creating startup image
+2024-12-11 10:44:14,542 - __main__ - INFO - Creating startup image
+2024-12-11 10:46:41,732 - __main__ - INFO - Creating startup image
+2024-12-11 10:46:48,170 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-11 10:47:28,925 - __main__ - INFO - Creating startup image
+2024-12-11 10:47:35,620 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-11 10:47:35,850 - src.threads_manager - INFO - Thread "Change detector" started.
+2024-12-11 10:47:35,937 - src.threads_manager - INFO - Thread "Discord image receiver" started.
+2024-12-11 10:47:52,628 - src.image_receiver.discord_image_receiver - INFO - Received refresh message from bennowo. Taking picture...
+2024-12-11 10:47:56,984 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
+2024-12-11 12:25:03,871 - __main__ - INFO - Creating startup image
+2024-12-11 12:25:10,331 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-11 12:25:10,333 - src.threads_manager - INFO - Thread "Change detector" started.
+2024-12-11 12:25:10,333 - src.threads_manager - INFO - Thread "Discord image receiver" started.
+2024-12-11 12:25:55,671 - __main__ - INFO - Creating startup image
+2024-12-11 12:26:02,051 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-11 12:26:02,085 - src.threads_manager - INFO - Thread "Change detector" started.
+2024-12-11 12:26:02,114 - src.threads_manager - INFO - Thread "Discord image receiver" started.
+2024-12-11 12:26:45,599 - src.image_receiver.discord_image_receiver - INFO - Received refresh message from bennowo. Taking picture...
+2024-12-11 12:26:49,297 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
+2024-12-11 12:27:05,623 - src.detect_change - INFO - Detected a change! Sending image...
+2024-12-11 12:27:06,085 - src.image_sender.discord_image_sender - INFO - Message sent successfully with image!
+2024-12-11 16:58:49,441 - __main__ - INFO - Creating startup image
+2024-12-11 16:58:56,410 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
+2024-12-11 16:58:56,411 - src.threads_manager - INFO - Thread "Change detector" started.
+2024-12-11 16:58:56,412 - src.threads_manager - INFO - Thread "Discord image receiver" started.

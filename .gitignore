@@ -3,6 +3,7 @@ SavedImages/
 .DS_Store
 assets/config.yaml
 logs
+.tags
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
