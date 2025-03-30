@@ -9,4 +9,4 @@ class ImageSender(ABC):
         pass
 
     async def send_image(self, image_path: Path | str, **kwargs) -> Response:
-        return Response(False, "Can't use base class")
+        raise NotImplementedError("Can't use base class")

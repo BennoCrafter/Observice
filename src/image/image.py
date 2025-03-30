@@ -6,3 +6,6 @@ class Image:
 
     def delete_image(self) -> None:
         self.source_path.unlink()
+
+    def __str__(self) -> str:
+        return f"Image({self.source_path})"

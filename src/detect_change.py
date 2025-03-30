@@ -1,32 +1,44 @@
 import asyncio
+from typing import Optional
 
 from src.change_detector.image_comparator import ImageComparator
 from src.config import CONFIG
 from src.image.image_management import ImageManagement
 from src.image_sender.image_sender import ImageSender
 from src.logger.logger import setup_logger
+from src.task.task import Task
+from src.task.task_result import TaskResult
 
 logger = setup_logger()
 
+class ChangeDetectorTask(Task):
+    def __init__(self, image_sender: ImageSender):
+        super().__init__(run_every=CONFIG.change_detector.refresh_rate)
+        self.image_sender = image_sender
 
-async def change_detector_loop(image_sender: ImageSender):
-    ic = ImageComparator()
-    im = ImageManagement()
-    webhook = CONFIG.discord.webhook_url
-    while True:
-        await asyncio.sleep(CONFIG.change_detector.refresh_rate)
+        self.ic = ImageComparator()
+        self.im = ImageManagement()
 
-        prev_image = im.get_latest_image()
-        response, image = await im.create_new_image()
+    async def run(self, frame: Optional[int]):
+        ic = ImageComparator()
+        webhook = CONFIG.discord.webhook_url
+
+        prev_image = self.im.get_latest_image()
+        response, image = await self.im.create_new_image()
 
         if response.is_error() or image is None:
-            logger.error(f"Could'nt take image for change detector! {response.message}")
-            continue
+            logger.error(f"Could not take image for change detector! {response.message}")
+            return
 
         # similarity = ic.similarity(prev_image.source_path, image.source_path)
+        if prev_image is None:
+            logger.info("No previous image found. Sending new image...")
+            await self.image_sender.send_image(image.source_path, webhook=webhook)
+            return
+
         changed = ic.changed(prev_image.source_path, image.source_path)
 
         # logger.debug(f"Took image for change detector. Similarity: {similarity}")
         if changed:
             logger.info("Detected a change! Sending image...")
-            await image_sender.send_image(image.source_path, webhook=webhook)
+            await self.image_sender.send_image(image.source_path, webhook=webhook)

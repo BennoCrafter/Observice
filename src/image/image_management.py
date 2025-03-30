@@ -1,10 +1,11 @@
 from src.config.models.image_config import ImageConfig
 from src.image.image import Image
-from src.image.create_image import create_image
+from src.image.create_image import ImageProviderFactory
 from src.utils.get_current_timestamp import get_current_timestamp
 from src.utils.response import Response
 from src.image.image_queue import ImageQueue
 from src.decorators.singleton import singleton
+from typing import Optional
 
 
 @singleton
@@ -28,8 +29,8 @@ class ImageManagement:
             if file.is_file() and (file.suffix.lower() == f'.{self.image_config.type}'):
                 self.image_queue.add(Image(file))
 
-    async def create_new_image(self) -> tuple[Response, Image | None]:
-        image_creation_resp, path = await create_image(image_config=self.image_config, image_name=get_current_timestamp())
+    async def create_new_image(self) -> tuple[Response, Optional[Image]]:
+        image_creation_resp, path = await ImageProviderFactory.get_provider().create_image(image_config=self.image_config, image_name=get_current_timestamp())
 
         if not image_creation_resp.is_success():
             return image_creation_resp, None
@@ -39,5 +40,5 @@ class ImageManagement:
 
         return Response(success=True), i
 
-    def get_latest_image(self) -> Image:
+    def get_latest_image(self) -> Optional[Image]:
         return self.image_queue.get_latest_image()

@@ -1,22 +1,23 @@
 from abc import ABC
 import asyncio
+from typing import Optional
 from src.image_sender.image_sender import ImageSender
 from src.config import CONFIG
+from src.task.task import Task
 
 
-class ImageReceiver(ABC):
+
+class ImageReceiverTask(Task):
     def __init__(self, image_sender: ImageSender):
+        super().__init__(CONFIG.image_receiver.refresh_rate)
         self.image_sender = image_sender
 
     def check(self) -> bool:
-        return False
+        ...
 
     async def process(self):
-        pass
+        ...
 
-    async def loop(self):
-        while True:
-            if self.check():
-                await self.process()
-            else:
-                await asyncio.sleep(CONFIG.image_receiver.refresh_rate)
+    async def run(self, frame: Optional[int]):
+        if self.check():
+            await self.process()

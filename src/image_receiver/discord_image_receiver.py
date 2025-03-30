@@ -1,10 +1,12 @@
-from src.image_receiver.image_receiver import ImageReceiver
+from src.image_receiver.image_receiver import ImageReceiverTask
 from src.image.image_management import ImageManagement
 from src.logger.logger import setup_logger
 from src.image_sender.image_sender import ImageSender
 
 from src.config import CONFIG
 import requests
+
+from src.task.task import Task
 
 logger = setup_logger()
 
@@ -18,7 +20,7 @@ class DiscordMessage:
         return self.id == other.id
 
 
-class DiscordImageReceiver(ImageReceiver):
+class DiscordImageReceiverTask(ImageReceiverTask):
     def __init__(self, image_sender: ImageSender):
         super().__init__(image_sender)
 

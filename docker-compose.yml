@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  observice:
+    image: observice
+    build: .
+    restart: always
+    privileged: true # Allows access to the camera
+    ports:
+      - "8080:8080"
+    devices:
+      - "/dev/video0:/dev/video0" # Gives access to the camera

@@ -4,6 +4,7 @@ SavedImages/
 assets/config.yaml
 logs
 .tags
+scratches
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

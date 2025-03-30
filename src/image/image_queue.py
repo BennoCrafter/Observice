@@ -1,3 +1,4 @@
+from typing import Optional
 from src.image.image import Image
 
 
@@ -19,5 +20,5 @@ class ImageQueue:
     def image_queue_length_reached(self) -> bool:
         return len(self.images) >= self.max_queue_length
 
-    def get_latest_image(self) -> Image:
-        return self.images[-1]
+    def get_latest_image(self) -> Optional[Image]:
+        return self.images[-1] if self.images else None

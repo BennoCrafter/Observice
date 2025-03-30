@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Live Log Viewer</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            /* Reset margins and paddings */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Roboto", sans-serif;
+                background: linear-gradient(135deg, #e0e0e0, #f9f9f9);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                min-height: 100vh;
+                padding: 40px 20px;
+                color: #333;
+            }
+
+            h1 {
+                font-size: 3rem;
+                margin-bottom: 20px;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+                color: #444;
+                font-weight: 700;
+                text-align: center;
+            }
+
+            #log {
+                width: 100%;
+                max-width: 900px;
+                background-color: #1e1e1e;
+                color: #00ff00;
+                padding: 20px;
+                font-family: "Consolas", "Courier New", monospace;
+                height: 500px;
+                overflow-y: auto;
+                border-radius: 10px;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                font-size: 16px;
+                line-height: 1.6;
+                border: 2px solid #333;
+            }
+
+            /* Custom scrollbar styling */
+            #log::-webkit-scrollbar {
+                width: 12px;
+            }
+
+            #log::-webkit-scrollbar-track {
+                background: #2d2d2d;
+                border-radius: 10px;
+            }
+
+            #log::-webkit-scrollbar-thumb {
+                background: #555;
+                border-radius: 10px;
+            }
+
+            #log::-webkit-scrollbar-thumb:hover {
+                background: #777;
+            }
+
+            /* Log entry types styling */
+            .log-entry {
+                margin-bottom: 15px;
+                padding: 10px;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+            }
+
+            .log-entry:hover {
+                transform: scale(1.03);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .info {
+                color: #00ff00;
+                background-color: #2a2a2a;
+            }
+
+            .warning {
+                color: #ffcc00;
+                background-color: #333333;
+            }
+
+            .error {
+                color: #ff0000;
+                background-color: #330000;
+            }
+
+            .footer {
+                margin-top: 30px;
+                font-size: 1rem;
+                color: #777;
+                text-align: center;
+            }
+
+            .footer a {
+                color: #dfc184;
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            .footer a:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Live Log Viewer</h1>
+        <div id="log"></div>
+        <div class="footer">
+            Powered by FastAPI &amp; WebSockets |
+            <a href="https://fastapi.tiangolo.com" target="_blank"
+                >Learn More</a
+            >
+        </div>
+
+        <script>
+            const log = document.getElementById("log");
+            const ws = new WebSocket("ws://localhost:8000/livelog/ws");
+
+            ws.onmessage = function (event) {
+                event.data.split("\n").forEach(function (msg) {
+                    newEntry(msg);
+                });
+            };
+
+            ws.onerror = function (event) {
+                console.error("WebSocket error:", event);
+            };
+
+            ws.onclose = function (event) {
+                console.log("WebSocket connection closed:", event);
+            };
+
+            function newEntry(logText) {
+                if (logText == "") {
+                    return;
+                }
+                const logEntry = document.createElement("div");
+                const logLevelRegex = /\s-(\s?)(ERROR|WARNING|INFO|DEBUG)\s-/i;
+                const match = logText.match(logLevelRegex);
+                const logLevel = match ? match[2].toUpperCase() : "INFO";
+
+                if (logLevel === "ERROR") {
+                    logEntry.classList.add("log-entry", "error");
+                } else if (logLevel === "WARNING") {
+                    logEntry.classList.add("log-entry", "warning");
+                } else if (logLevel === "INFO") {
+                    logEntry.classList.add("log-entry", "info");
+                } else {
+                    logEntry.classList.add("log-entry", "info"); // Default to info for undefined levels
+                }
+
+                logEntry.innerHTML = logText;
+                log.appendChild(logEntry);
+                log.scrollTop = log.scrollHeight; // Auto-scroll to the bottom
+            }
+        </script>
+    </body>
+</html>
