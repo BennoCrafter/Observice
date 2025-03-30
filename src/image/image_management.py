@@ -11,7 +11,7 @@ from typing import Optional
 @singleton
 class ImageManagement:
     def __init__(self, image_config: ImageConfig | None = None) -> None:
-        if hasattr(self, '_initialized'):
+        if hasattr(self, "_initialized"):
             return
 
         self._initialized = True
@@ -19,18 +19,23 @@ class ImageManagement:
         self.image_queue: ImageQueue = ImageQueue(max_queue_length=10)
 
         if image_config is None:
-              raise ValueError("image_config cannot be None")
+            raise ValueError("image_config cannot be None")
         self.image_config: ImageConfig = image_config
         self.load_existing_images()
 
     def load_existing_images(self):
         """Load existing image in images library"""
         for file in self.image_config.images_dir.iterdir():
-            if file.is_file() and (file.suffix.lower() == f'.{self.image_config.type}'):
+            if file.is_file() and (file.suffix.lower() == f".{self.image_config.type}"):
                 self.image_queue.add(Image(file))
 
     async def create_new_image(self) -> tuple[Response, Optional[Image]]:
-        image_creation_resp, path = await ImageProviderFactory.get_provider().create_image(image_config=self.image_config, image_name=get_current_timestamp())
+        (
+            image_creation_resp,
+            path,
+        ) = await ImageProviderFactory.get_provider().create_image(
+            image_config=self.image_config, image_name=get_current_timestamp()
+        )
 
         if not image_creation_resp.is_success():
             return image_creation_resp, None

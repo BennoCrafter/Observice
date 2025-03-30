@@ -10,13 +10,17 @@ class ThreadsManager:
     def __init__(self) -> None:
         self.threads: List[threading.Thread] = []
 
-    def add_new_thread(self, target: Callable, name: str, args: Tuple = (), kwargs: Dict = {}):
+    def add_new_thread(
+        self, target: Callable, name: str, args: Tuple = (), kwargs: Dict = {}
+    ):
         if asyncio.iscoroutinefunction(target):
             wrapped_target = self._async_target_wrapper(target)
         else:
             wrapped_target = self._auto_restart(target)
 
-        new_thread = threading.Thread(target=wrapped_target, name=name, args=args, kwargs=kwargs)
+        new_thread = threading.Thread(
+            target=wrapped_target, name=name, args=args, kwargs=kwargs
+        )
         self.threads.append(new_thread)
 
     def start_threads(self):
@@ -42,6 +46,8 @@ class ThreadsManager:
                     target(*args, **kwargs)
                     break
                 except Exception as e:
-                    print(f"Error in thread {threading.current_thread().name}: {e}. Restarting...")
+                    print(
+                        f"Error in thread {threading.current_thread().name}: {e}. Restarting..."
+                    )
 
         return wrapped_target

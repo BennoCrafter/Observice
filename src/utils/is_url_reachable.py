@@ -1,6 +1,7 @@
 from src.utils.response import Response
 import requests
 
+
 def is_url_reachable(url: str) -> Response:
     """
     Check if a URL is reachable.
@@ -13,7 +14,9 @@ def is_url_reachable(url: str) -> Response:
         if response.status_code == 200:
             return Response(True, "200 Accepted")
         else:
-            return Response(False, f"Status code: {response.status_code}: {response.reason}")
+            return Response(
+                False, f"Status code: {response.status_code}: {response.reason}"
+            )
     except requests.ConnectionError:
         return Response(False, "Connection Error: The URL is not reachable.")
     except requests.Timeout:

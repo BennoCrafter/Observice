@@ -12,6 +12,7 @@ def load_config(file_path: Path) -> Config:
         yaml_data = yaml.safe_load(file)
         return from_dict(data_class=Config, data=yaml_data)
 
+
 def from_dict(data_class, data: dict) -> Any:
     """
     Converts a dictionary to an instance of a data class.

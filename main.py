@@ -32,6 +32,7 @@ class AutoRestartTask(Task):
         if time.localtime().tm_hour == 4 and time.localtime().tm_min == 0:
             restart()
 
+
 def auto_restarting():
     time.sleep(70)
 
@@ -48,7 +49,9 @@ async def create_on_startup_image():
     p = Path("temp")
     p.mkdir(exist_ok=True)
     image_config = ImageConfig(images_dir=Path("temp"), quality="100", type="jpeg")
-    resp, temp_img_path = await ImageProviderFactory.get_provider().create_image(image_config=image_config, image_name="temp_img")
+    resp, temp_img_path = await ImageProviderFactory.get_provider().create_image(
+        image_config=image_config, image_name="temp_img"
+    )
     if not resp.is_success():
         logger.error(f"Could not create image for startup: {resp.message}")
         return
@@ -66,7 +69,7 @@ if __name__ == "__main__":
     tasks = [
         AutoRestartTask(),
         ChangeDetectorTask(image_sender=DiscordImageSender()),
-        DiscordImageReceiverTask(image_sender=DiscordImageSender())
+        DiscordImageReceiverTask(image_sender=DiscordImageSender()),
     ]
     observice = Observice(tasks=tasks)
 

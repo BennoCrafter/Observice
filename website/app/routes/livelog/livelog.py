@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import asyncio
@@ -10,7 +10,10 @@ livelog_router = APIRouter()
 
 
 # Mount the static directory for additional assets
-livelog_router.mount("/static", StaticFiles(directory="app/routes/static"), name="static")
+livelog_router.mount(
+    "/static", StaticFiles(directory="app/routes/static"), name="static"
+)
+
 
 @livelog_router.get("/")
 async def get():
@@ -18,6 +21,7 @@ async def get():
     async with aiofiles.open("app/routes/livelog/index.html", mode="r") as f:
         html_content = await f.read()
     return HTMLResponse(html_content)
+
 
 async def tail_log_file(file_path: str, websocket: WebSocket, debug: bool = False):
     """
@@ -52,6 +56,7 @@ async def tail_log_file(file_path: str, websocket: WebSocket, debug: bool = Fals
         except WebSocketDisconnect:
             print("WebSocket disconnected while handling error.")
 
+
 @livelog_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
@@ -59,7 +64,11 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     await websocket.accept()
     try:
-        await tail_log_file("/Users/benno/coding/Observice/scratches/livelog/app.log", websocket, debug=True)
+        await tail_log_file(
+            "/Users/benno/coding/Observice/scratches/livelog/app.log",
+            websocket,
+            debug=True,
+        )
     except WebSocketDisconnect:
         print("Client disconnected from websocket")
     except Exception as e:

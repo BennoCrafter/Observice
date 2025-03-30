@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional
 
 from src.change_detector.image_comparator import ImageComparator
@@ -7,9 +6,9 @@ from src.image.image_management import ImageManagement
 from src.image_sender.image_sender import ImageSender
 from src.logger.logger import setup_logger
 from src.task.task import Task
-from src.task.task_result import TaskResult
 
 logger = setup_logger()
+
 
 class ChangeDetectorTask(Task):
     def __init__(self, image_sender: ImageSender):
@@ -27,7 +26,9 @@ class ChangeDetectorTask(Task):
         response, image = await self.im.create_new_image()
 
         if response.is_error() or image is None:
-            logger.error(f"Could not take image for change detector! {response.message}")
+            logger.error(
+                f"Could not take image for change detector! {response.message}"
+            )
             return
 
         # similarity = ic.similarity(prev_image.source_path, image.source_path)

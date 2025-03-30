@@ -30,3 +30,13 @@
 2024-12-11 16:58:56,410 - src.threads_manager - INFO - Thread "Auto restarting at 4 am." started.
 2024-12-11 16:58:56,411 - src.threads_manager - INFO - Thread "Change detector" started.
 2024-12-11 16:58:56,412 - src.threads_manager - INFO - Thread "Discord image receiver" started.
+2025-03-30 01:43:56,185 - __main__ - INFO - Starting Observice
+2025-03-30 01:43:56,185 - __main__ - INFO - Creating startup image
+2025-03-30 01:43:56,317 - __main__ - ERROR - Could not create image for startup: Failed to capture image with OpenCV
+2025-03-30 01:44:11,894 - __main__ - INFO - Starting Observice
+2025-03-30 01:44:11,894 - __main__ - INFO - Creating startup image
+2025-03-30 01:44:51,788 - __main__ - INFO - Starting Observice
+2025-03-30 01:44:51,821 - __main__ - INFO - Creating startup image
+2025-03-30 01:45:35,201 - __main__ - INFO - Starting Observice
+2025-03-30 01:45:35,231 - __main__ - INFO - Creating startup image
+2025-03-30 01:45:39,363 - __main__ - INFO - Observice stopped

@@ -9,9 +9,12 @@ from src.utils.response import Response
 
 logger = setup_logger()
 
+
 class ImageCaptureProvider:
-    async def create_image(self, image_config: ImageConfig, image_name: str) -> tuple[Response, Path]:
-        ...
+    async def create_image(
+        self, image_config: ImageConfig, image_name: str
+    ) -> tuple[Response, Path]: ...
+
 
 class ImageProviderFactory:
     @staticmethod
@@ -24,9 +27,14 @@ class ImageProviderFactory:
         else:
             return OpenCVProvider()
 
+
 class OpenCVProvider(ImageCaptureProvider):
-    async def create_image(self, image_config: ImageConfig, image_name: str) -> tuple[Response, Path]:
-        img_path = Path(image_config.images_dir / (image_name + "." + image_config.type))
+    async def create_image(
+        self, image_config: ImageConfig, image_name: str
+    ) -> tuple[Response, Path]:
+        img_path = Path(
+            image_config.images_dir / (image_name + "." + image_config.type)
+        )
 
         try:
             cap = cv2.VideoCapture(0)
@@ -37,7 +45,9 @@ class OpenCVProvider(ImageCaptureProvider):
                 cv2.imwrite(str(img_path), frame)
                 return Response(success=True, message="Took picture!"), img_path
             else:
-                return Response(success=False, message="Failed to capture image with OpenCV"), img_path
+                return Response(
+                    success=False, message="Failed to capture image with OpenCV"
+                ), img_path
 
         except Exception as e:
             return Response(
@@ -45,9 +55,14 @@ class OpenCVProvider(ImageCaptureProvider):
                 message=f"Error capturing image with OpenCV. ({e})",
             ), img_path
 
+
 class FSWebcamProvider(ImageCaptureProvider):
-    async def create_image(self, image_config: ImageConfig, image_name: str) -> tuple[Response, Path]:
-        img_path = Path(image_config.images_dir / (image_name + "." + image_config.type))
+    async def create_image(
+        self, image_config: ImageConfig, image_name: str
+    ) -> tuple[Response, Path]:
+        img_path = Path(
+            image_config.images_dir / (image_name + "." + image_config.type)
+        )
 
         command = f"fswebcam --{image_config.type} {image_config.quality} -S 2 --save {img_path}"
 
@@ -64,7 +79,9 @@ class FSWebcamProvider(ImageCaptureProvider):
                 return Response(success=True, message="Took picture!"), img_path
             else:
                 error_message = stderr.decode().strip() if stderr else "Unknown error"
-                return Response(success=False, message=f"Error capturing image: {error_message}"), img_path
+                return Response(
+                    success=False, message=f"Error capturing image: {error_message}"
+                ), img_path
 
         except Exception as e:
             return Response(

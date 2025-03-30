@@ -1,15 +1,19 @@
-import time
 from typing import Optional
-import random
 from src.task.task import Task
-from src.task.task_result import TaskResult
 import asyncio
 from src.logger.logger import setup_logger
 
 logger = setup_logger()
 
+
 class Observice:
-    def __init__(self, tasks: list[Task], loop_running: bool = True, frame_limit: int = 1000, step: int = 1) -> None:
+    def __init__(
+        self,
+        tasks: list[Task],
+        loop_running: bool = True,
+        frame_limit: int = 1000,
+        step: int = 1,
+    ) -> None:
         self.tasks = tasks
         self.frame_limit = frame_limit
         self.step = step
@@ -19,7 +23,9 @@ class Observice:
         tasks_exceeds_limit, target_task = self.check_tasks_if_exceeding_limit()
         if tasks_exceeds_limit:
             if target_task is not None:
-                raise ValueError(f"The target tasks exceeds the limit from {self.frame_limit} ({target_task.run_every})")
+                raise ValueError(
+                    f"The target tasks exceeds the limit from {self.frame_limit} ({target_task.run_every})"
+                )
             else:
                 raise ValueError(f"A task exceeds the limit from {self.frame_limit}")
 
@@ -29,11 +35,10 @@ class Observice:
                 return True, task
         return False, None
 
-
     def increase_frame(self) -> None:
         if self._current_frame == self.frame_limit:
-           self._current_frame = 1
-           return
+            self._current_frame = 1
+            return
 
         self._current_frame += self.step
 
