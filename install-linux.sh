@@ -44,7 +44,8 @@ else
 fi
 
 echo -e "${GREEN}🐳 Building and starting Observice container...${RESET}"
-docker compose build
-docker compose up -d
+
+sudo docker-compose build
+sudo docker-compose up -d
 
 echo -e "${GREEN}✅ Installation Complete!${RESET}"
