@@ -138,6 +138,10 @@ class MqttBridge:
             self.client.publish(f"{self.base_topic}/{object_id}/state", get_value(self.config), retain=True)
 
     def _on_connect(self, client, userdata, flags, rc):
+        if rc != 0:
+            # paho retries on its own; e.g. rc=5 means wrong mqtt.username/password
+            logger.error("MQTT broker refused connection: %s", mqtt.connack_string(rc))
+            return
         for entity in ENTITIES:
             topic, payload = _discovery(entity, self.base_topic)
             client.publish(topic, payload, retain=True)
