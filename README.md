@@ -19,31 +19,22 @@ Point it at any camera — a room, a door, a 3D printer — see **Make it yours*
 Pick one of the two paths below. Either way, first:
 
 1. Plug in a USB (or CSI) camera to whatever host you're running on, make sure `/dev/video0` exists (`ls /dev/video0`).
-2. `cp assets/default_config.yaml assets/config.yaml` and fill in your Discord webhook URL / bot token and MQTT broker details (see **Configuration** below).
+2. `cp assets/default_config.yaml assets/config.yaml` and fill in your Discord webhook URL / bot token and MQTT broker details (see **Configuration** below). Option A's installer does the copy for you.
 
 ### Option A — systemd (recommended on a Raspberry Pi)
 
 Running directly on the host avoids container/GStreamer version mismatches (see the note in the Dockerfile) and gives simpler camera access.
 
-The service expects the repo at `/opt/observice`. It runs as your user (newer Pi OS has no default `pi` user), which must be in the `video` group (`groups` to check, `sudo usermod -aG video $(whoami)` + reboot to add). No login or auto-login is needed — it starts at boot.
-=======
-The service expects the repo at `/opt/observice` and runs as user `pi` — adjust `deploy/observice.service` if yours differ.
+Run as your normal user (not root) — it clones to `/opt/observice`, installs the apt packages, creates a venv (Pi OS blocks system-wide `pip`), adds you to the `video` group and installs the systemd service running as you. Re-run it to update.
 
->>>>>>> 46b0d7cd9e5b4f4bfcbee1ba25c8b1f1856295db
 ```bash
-cd /opt/observice
-sudo apt install -y python3-gi gir1.2-gst-rtsp-server-1.0 \
-    gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
-# Pi OS blocks system-wide pip ("externally-managed-environment"), so use a venv.
-# --system-site-packages keeps apt's python3-gi importable inside it.
-python3 -m venv --system-site-packages venv
-venv/bin/pip install -r assets/requirements.txt
-sudo cp deploy/observice.service /etc/systemd/system/
-sudo sed -i "s/^User=pi/User=$(whoami)/" /etc/systemd/system/observice.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now observice
-journalctl -u observice -f   # check it started cleanly
+curl -fsSL https://raw.githubusercontent.com/BennoCrafter/Observice/main/install-pi.sh | bash
+nano /opt/observice/assets/config.yaml   # fill in Discord/MQTT
+sudo systemctl restart observice
+journalctl -u observice -f               # check it started cleanly
 ```
+
+No login or auto-login is needed — the service starts at boot.
 
 ### Option B — Docker
 
