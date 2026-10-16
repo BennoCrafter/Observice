@@ -8,8 +8,6 @@ from observice.config import Config, save_config
 
 logger = logging.getLogger("observice")
 
-DEVICE_ID = "observice_garage"
-
 # One entry per HA entity this bridge exposes. "extra" holds fields specific
 # to that HA component (device_class, unit_of_measurement, min/max, ...).
 ENTITIES = [
@@ -18,6 +16,13 @@ ENTITIES = [
         "object_id": "motion",
         "name": "Motion",
         "extra": {"device_class": "motion"},
+        "settable": False,
+    },
+    {
+        "component": "sensor",
+        "object_id": "log",
+        "name": "Log",
+        "extra": {"entity_category": "diagnostic", "icon": "mdi:text-box-outline"},
         "settable": False,
     },
     {
@@ -65,21 +70,32 @@ FIELD_MAP = {
 }
 
 
-def _device_info() -> dict:
-    return {"identifiers": [DEVICE_ID], "name": "Observice Garage", "manufacturer": "Observice"}
+class MqttLogHandler(logging.Handler):
+    """Mirrors log records to the HA "Log" sensor; HA's history keeps past lines."""
+
+    def __init__(self, client: mqtt.Client, topic: str):
+        super().__init__(logging.INFO)
+        self.client = client
+        self.topic = topic
+        self.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+
+    def emit(self, record: logging.LogRecord) -> None:
+        # HA rejects sensor states longer than 255 chars
+        self.client.publish(self.topic, self.format(record)[:255], retain=True)
 
 
 def _discovery(entity: dict, base_topic: str) -> tuple[str, str]:
+    device_id = base_topic.replace("/", "_")
     object_id = entity["object_id"]
-    topic = f"homeassistant/{entity['component']}/{DEVICE_ID}/{object_id}/config"
+    topic = f"homeassistant/{entity['component']}/{device_id}/{object_id}/config"
     payload = {
         "name": entity["name"],
-        "unique_id": f"{DEVICE_ID}_{object_id}",
+        "unique_id": f"{device_id}_{object_id}",
         "state_topic": f"{base_topic}/{object_id}/state",
         "availability_topic": f"{base_topic}/status",
         "payload_available": "online",
         "payload_not_available": "offline",
-        "device": _device_info(),
+        "device": {"identifiers": [device_id], "name": f"Observice {base_topic}", "manufacturer": "Observice"},
         **entity["extra"],
     }
     if entity["settable"]:
@@ -101,12 +117,15 @@ class MqttBridge:
         self.client.will_set(f"{self.base_topic}/status", "offline", retain=True)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
+        self.log_handler = MqttLogHandler(self.client, f"{self.base_topic}/log/state")
 
     def connect(self) -> None:
         self.client.connect(self.config.mqtt.host, self.config.mqtt.port)
         self.client.loop_start()
+        logger.addHandler(self.log_handler)
 
     def close(self) -> None:
+        logger.removeHandler(self.log_handler)
         self.client.publish(f"{self.base_topic}/status", "offline", retain=True)
         self.client.loop_stop()
         self.client.disconnect()

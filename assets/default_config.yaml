@@ -11,10 +11,10 @@ motion:
   threshold: 25 # mean pixel-diff above this counts as "changed"
 
 discord:
-  enabled: true
+  enabled: false
   webhook_url: ""
   token: "" # only needed for scripts/download_discord_images.py
-  listening_users: [] # Discord user ids to @-mention when an image is sent
+  listening_users: [] # Discord user ids to @-mention when an image is sent (int)
 
 mqtt:
   enabled: true
@@ -22,4 +22,4 @@ mqtt:
   port: 1883
   username: ""
   password: ""
-  base_topic: observice/garage
+  base_topic: observice/camera

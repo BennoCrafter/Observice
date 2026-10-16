@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import signal
+import socket
 import tempfile
 import threading
 from pathlib import Path
@@ -20,7 +21,18 @@ CONFIG_PATH = Path("assets/config.yaml")
 logger = setup_logger()
 
 
+def lan_ip() -> str:
+    # UDP connect sends nothing; it just makes the OS pick the outbound interface
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(("10.255.255.255", 1))
+            return s.getsockname()[0]
+        except OSError:
+            return socket.gethostname()
+
+
 async def main() -> None:
+    print(Path("assets/ascii_name.txt").read_text())
     signal.signal(signal.SIGTERM, signal.default_int_handler)
 
     config = load_config(CONFIG_PATH)
@@ -28,7 +40,7 @@ async def main() -> None:
     rtsp = RTSPServer(config.camera)
     glib_loop = GLib.MainLoop()
     threading.Thread(target=glib_loop.run, daemon=True).start()
-    logger.info("RTSP stream ready at rtsp://<this-host>:%s/cam", rtsp.port)
+    logger.info("RTSP stream ready at rtsp://%s:%s/cam", lan_ip(), rtsp.port)
 
     bridge = MqttBridge(config, CONFIG_PATH) if config.mqtt.enabled else None
     if bridge:

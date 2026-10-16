@@ -10,9 +10,7 @@ class CameraConfig:
     height: int = 720
     framerate: int = 30
     rtsp_port: int = 8554
-    device: str = (
-        ""  # Linux only: v4l2 device path, e.g. /dev/video2. Empty = /dev/video0.
-    )
+    device: str = ""  # Linux only: v4l2 device path, e.g. /dev/video2. Empty = /dev/video0.
 
 
 @dataclass
@@ -24,7 +22,7 @@ class MotionConfig:
 
 @dataclass
 class DiscordConfig:
-    enabled: bool = True
+    enabled: bool = False
     webhook_url: str = ""
     token: str = ""  # only needed for scripts/download_discord_images.py
     listening_users: list[int] = field(default_factory=list)
@@ -37,7 +35,7 @@ class MqttConfig:
     port: int = 8123
     username: str = ""
     password: str = ""
-    base_topic: str = "observice/garage"
+    base_topic: str = "observice/camera"
 
 
 @dataclass

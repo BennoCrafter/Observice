@@ -1,8 +1,10 @@
 # Observice
 
+<img src="assets/observice.svg" width="96" alt="Observice icon">
+
 A small, self-hosted camera-watching service: serves a camera as an RTSP stream, watches it for motion, notifies you when something changes, and integrates with Home Assistant over MQTT.
 
-It's built around one camera in one garage in this repo's default config, but nothing about it is hardcoded to that — see **Make it yours** below for what to change to point it at a different camera, a different notification channel, or a different room/device entirely in Home Assistant.
+Point it at any camera — a room, a door, a 3D printer — see **Make it yours** below for what to change.
 
 ## How it fits together
 
@@ -69,17 +71,17 @@ sudo crontab -e
 | `mqtt`    | `enabled`        | Turn the Home Assistant/MQTT bridge on/off                            |
 |           | `host/port`      | Your MQTT broker (the HA "Mosquitto broker" add-on, typically)        |
 |           | `username/password` | Broker credentials, if required                                    |
-|           | `base_topic`     | MQTT topic prefix (default `observice/garage`) — rename this per camera if you run more than one instance |
+|           | `base_topic`     | MQTT topic prefix (default `observice/camera`) — also names the HA device; use a unique one per instance, e.g. `observice/frontdoor` |
 
 ## Home Assistant setup
 
-1. **Camera**: in HA, add a camera entity pointing at the RTSP stream — no Observice-side setup needed:
+1. **Camera**: the video doesn't go over MQTT — HA pulls the RTSP stream straight from Observice. Add a camera entity pointing at it:
    ```yaml
    camera:
      - platform: generic
        stream_source: rtsp://<host-ip>:8554/cam
    ```
-2. **MQTT**: make sure HA's MQTT integration is configured against the same broker as `mqtt.host`/`mqtt.port` in your config. Once Observice connects, it auto-publishes discovery entities under `homeassistant/...` — a motion sensor, a "Motion Detection" switch, a "Discord Notifications" switch, and a "Motion Check Interval" number will appear in HA without any manual YAML.
+2. **MQTT**: make sure HA's MQTT integration is configured against the same broker as `mqtt.host`/`mqtt.port` in your config. Once Observice connects, it auto-publishes discovery entities under `homeassistant/...` — a motion sensor, a "Log" sensor (latest log line; past lines in its history), a "Motion Detection" switch, a "Discord Notifications" switch, and a "Motion Check Interval" number will appear in HA without any manual YAML.
 3. Flipping those switches/number in HA writes straight back to `assets/config.yaml` on the host.
 
 ## Discord image downloader
@@ -97,7 +99,7 @@ Everything here is deliberately plain Python + YAML, not framework-locked, so re
 
 - **Different camera / location**: just a config change — edit `camera.device` (and `assets/config.yaml`'s `mqtt.base_topic`, so it doesn't collide with another instance) to point at a different room, printer-cam, or device. Run a second instance for a second camera.
 - **Different notification channel**: `observice/discord_notify.py` is a single `send_image()` function — swap it for a Slack webhook, a Telegram bot, an email, whatever; `observice/main.py`'s `on_motion()` callback is the one place that calls it.
-- **Different Home Assistant identity**: the device name/id HA shows ("Observice Garage") lives as `DEVICE_ID`/`_device_info()` in `observice/mqtt_bridge.py` — change those two spots if you're monitoring something other than a garage.
+- **Different Home Assistant identity**: the HA device id/name is derived from `mqtt.base_topic` — `observice/frontdoor` shows up as "Observice observice/frontdoor".
 - **Different trigger logic**: `observice/motion.py`'s `frame_changed()` is one small, pure function (frame diff vs. a threshold) — replace it with whatever detection makes sense for your use case (object detection, a specific zone, a different sensor entirely) without touching the RTSP, Discord, or MQTT pieces.
 - **More entities in HA**: `ENTITIES`/`FIELD_MAP` in `observice/mqtt_bridge.py` are a small table, not a framework — add a row to expose another setting to HA.
 
