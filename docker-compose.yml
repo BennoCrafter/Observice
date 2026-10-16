@@ -1,12 +1,11 @@
-version: "3.8"
-
 services:
   observice:
     image: observice
     build: .
-    restart: always
-    privileged: true # Allows access to the camera
-    ports:
-      - "8080:8080"
+    restart: unless-stopped
+    privileged: true
+    network_mode: host # simplest fix for RTSP/RTP's dynamic port range in Docker
     devices:
-      - "/dev/video0:/dev/video0" # Gives access to the camera
+      - "/dev/video0:/dev/video0"
+    volumes:
+      - ./assets/config.yaml:/app/assets/config.yaml

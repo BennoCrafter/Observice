@@ -9,7 +9,7 @@ OS_TYPE=$(uname -s)
 
 git pull
 
-echo -e "${GREEN}🚀 Starting Garage Cam Installation...${RESET}"
+echo -e "${GREEN}🚀 Installing Observice...${RESET}"
 
 echo -e "${GREEN}🔍 Detected OS: ${OS_TYPE} ${RESET}"
 if [ "$OS_TYPE" != "Linux" ]; then

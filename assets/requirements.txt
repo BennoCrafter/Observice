@@ -1,8 +1,9 @@
-discord-py-interactions==5.11.0
-flask==3.0.3
-waitress==3.0.0
-pyyaml==6.0.1
-schedule
-scikit-image
+pyyaml
 requests
-opencv-python; sys_platform == "darwin"
+opencv-python-headless
+paho-mqtt
+# PyGObject + GStreamer bindings are NOT pip-installable on their own;
+# install via system packages (see README "Install" section):
+#   Debian/RPi OS: python3-gi gir1.2-gst-rtsp-server-1.0 gstreamer1.0-tools
+#                  gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+#   macOS (dev):   brew install pygobject3 gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav

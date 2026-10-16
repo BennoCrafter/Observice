@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b2027"/>
+      <stop offset="100%" stop-color="#101318"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="540" fill="url(#bg)"/>
+
+  <!-- camera glyph -->
+  <g transform="translate(480,215)">
+    <rect x="-70" y="-45" width="140" height="90" rx="14" fill="none" stroke="#6ee7c8" stroke-width="6"/>
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#6ee7c8" stroke-width="6"/>
+    <circle cx="0" cy="0" r="10" fill="#6ee7c8"/>
+    <rect x="-26" y="-62" width="52" height="18" rx="4" fill="#6ee7c8"/>
+    <!-- no-signal slash -->
+    <line x1="-95" y1="-70" x2="95" y2="70" stroke="#e8495f" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="480" y="345" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="6" fill="#f2f4f6">OBSERVICE</text>
+
+  <!-- status line -->
+  <text x="480" y="385" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="18" letter-spacing="2" fill="#8a929e">NO LIVE FEED</text>
+
+  <!-- blinking rec dot, static for a still image -->
+  <circle cx="60" cy="60" r="7" fill="#e8495f"/>
+  <text x="78" y="66" font-family="'Helvetica Neue', Arial, sans-serif" font-size="16" letter-spacing="2" fill="#8a929e">OFFLINE</text>
+</svg>
