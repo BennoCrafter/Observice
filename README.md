@@ -77,13 +77,8 @@ sudo crontab -e
 
 ## Home Assistant setup
 
-1. **Camera**: the video doesn't go over MQTT — HA pulls the RTSP stream straight from Observice. Add a camera entity pointing at it:
-   ```yaml
-   camera:
-     - platform: generic
-       stream_source: rtsp://<host-ip>:8554/cam
-   ```
-2. **MQTT**: make sure HA's MQTT integration is configured against the same broker as `mqtt.host`/`mqtt.port` in your config. Once Observice connects, it auto-publishes discovery entities under `homeassistant/...` — a motion sensor, a "Log" sensor (latest log line; past lines in its history), a "Motion Detection" switch, a "Discord Notifications" switch, and a "Motion Check Interval" number will appear in HA without any manual YAML.
+1. **Camera**: the video doesn't go over MQTT — HA pulls the RTSP stream straight from Observice. In HA: *Settings → Devices & services → Add integration → Generic Camera*, set **Stream source** to `rtsp://<pi-ip>:8554/cam`, leave **Still image URL** empty.
+2. **MQTT**: install the *Mosquitto broker* add-on, create an HA user for Observice (*Settings → People → Users*) and put its name/password in `mqtt.username`/`mqtt.password`; then add the *MQTT* integration (HA usually offers it automatically). Once Observice connects, it auto-publishes discovery entities under `homeassistant/...` — a motion sensor, a "Log" sensor (latest log line; past lines in its history), a "Motion Detection" switch, a "Discord Notifications" switch, and a "Motion Check Interval" number will appear in HA without any manual YAML.
 3. Flipping those switches/number in HA writes straight back to `assets/config.yaml` on the host.
 
 ## Discord image downloader

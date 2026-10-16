@@ -30,13 +30,23 @@ def _source_clause(camera: CameraConfig) -> str:
     raise RuntimeError(f"Unsupported platform: {system}")
 
 
+def _encoder_clause() -> str:
+    # Raspberry Pi (up to 4) has a hardware H.264 encoder; software x264 is far too slow there.
+    if Gst.ElementFactory.find("v4l2h264enc"):
+        return (
+            "videoconvert ! video/x-raw,format=I420 ! "
+            f'v4l2h264enc extra-controls="controls,video_bitrate={BITRATE * 1000},h264_i_frame_period={KEY_INT_MAX}" ! '
+            "video/x-h264,level=(string)4 ! h264parse"
+        )
+    return f"videoconvert ! x264enc tune={TUNE} bitrate={BITRATE} speed-preset={SPEED_PRESET} key-int-max={KEY_INT_MAX}"
+
+
 def build_pipeline(camera: CameraConfig) -> str:
-    source = _source_clause(camera)
+    size = f"width={camera.width},height={camera.height},framerate={camera.framerate}/1"
+    # Accept raw or MJPEG: USB webcams often only reach higher resolutions/fps as MJPEG.
     return (
-        f"( {source} ! "
-        f"video/x-raw,width={camera.width},height={camera.height},framerate={camera.framerate}/1 ! "
-        "videoconvert ! "
-        f"x264enc tune={TUNE} bitrate={BITRATE} speed-preset={SPEED_PRESET} key-int-max={KEY_INT_MAX} ! "
+        f"( {_source_clause(camera)} ! video/x-raw,{size};image/jpeg,{size} ! decodebin ! "
+        f"{_encoder_clause()} ! "
         f"rtph264pay config-interval={CONFIG_INTERVAL} name=pay0 pt={RTP_PAYLOAD_TYPE} )"
     )
 
