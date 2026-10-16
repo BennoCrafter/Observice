@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#111"/>
+  <g font-family="Menlo, 'DejaVu Sans Mono', monospace" fill="#ccc">
+    <text x="32" y="48" font-size="18">observice/cam</text>
+    <text x="480" y="282" font-size="32" text-anchor="middle" letter-spacing="4">NO SIGNAL</text>
+  </g>
+</svg>

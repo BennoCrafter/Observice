@@ -1,26 +1,25 @@
+camera:
+  width: 1280
+  height: 720
+  framerate: 30
+  rtsp_port: 8554
+  device: "" # Linux only: v4l2 device path, e.g. /dev/video2. Empty = /dev/video0.
+
+motion:
+  enabled: true
+  check_interval: 60 # seconds between frame comparisons
+  threshold: 25 # mean pixel-diff above this counts as "changed"
+
 discord:
-  token: ""
-  destination_channel_id: 123
-  receiver_channel_id: 123
+  enabled: false
   webhook_url: ""
-  listening_users: [] # (list of user ids)
+  token: "" # only needed for scripts/download_discord_images.py
+  listening_users: [] # Discord user ids to @-mention when an image is sent (int)
 
-image:
-  images_dir: "SavedImages"
-  quality: 100
-  type: jpeg
-
-server:
-  url:
-    base: http://home.local:8000/observice
-    logs_api_endpoint: /api/logs
-    logs_endpoint: /logs
-
-logger:
-  show_logs_in_server: true
-
-change_detector:
-  refresh_rate: 60 # (in seconds)
-
-image_receiver:
-  refresh_rate: 5 # (in seconds)
+mqtt:
+  enabled: true
+  host: homeassistant.local
+  port: 1883
+  username: ""
+  password: ""
+  base_topic: observice/camera

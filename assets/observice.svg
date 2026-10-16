@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="224" fill="#16202b"/>
+  <!-- "O" / lens ring, open at the top right -->
+  <path d="M584.5 241.5 A280 280 0 1 0 782.5 439.5" fill="none" stroke="#eef1f4" stroke-width="96" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="96" fill="#eef1f4"/>
+  <!-- live dot -->
+  <circle cx="710" cy="314" r="52" fill="#f2a93b"/>
+</svg>
