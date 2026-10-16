@@ -25,15 +25,19 @@ Pick one of the two paths below. Either way, first:
 
 Running directly on the host avoids container/GStreamer version mismatches (see the note in the Dockerfile) and gives simpler camera access.
 
-<<<<<<< Updated upstream
-=======
 The service expects the repo at `/opt/observice`. It runs as your user (newer Pi OS has no default `pi` user), which must be in the `video` group (`groups` to check, `sudo usermod -aG video $(whoami)` + reboot to add). No login or auto-login is needed — it starts at boot.
+=======
+The service expects the repo at `/opt/observice` and runs as user `pi` — adjust `deploy/observice.service` if yours differ.
 
->>>>>>> Stashed changes
+>>>>>>> 46b0d7cd9e5b4f4bfcbee1ba25c8b1f1856295db
 ```bash
+cd /opt/observice
 sudo apt install -y python3-gi gir1.2-gst-rtsp-server-1.0 \
     gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
-pip install -r assets/requirements.txt
+# Pi OS blocks system-wide pip ("externally-managed-environment"), so use a venv.
+# --system-site-packages keeps apt's python3-gi importable inside it.
+python3 -m venv --system-site-packages venv
+venv/bin/pip install -r assets/requirements.txt
 sudo cp deploy/observice.service /etc/systemd/system/
 sudo sed -i "s/^User=pi/User=$(whoami)/" /etc/systemd/system/observice.service
 sudo systemctl daemon-reload

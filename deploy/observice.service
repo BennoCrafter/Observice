@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 WorkingDirectory=/opt/observice
-ExecStart=/usr/bin/python3 -m observice.main
+ExecStart=/opt/observice/venv/bin/python -m observice.main
 Restart=on-failure
 RestartSec=5
 User=pi
