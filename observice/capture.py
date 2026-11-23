@@ -21,12 +21,16 @@ CONFIG_INTERVAL = 1
 RTP_PAYLOAD_TYPE = 96
 
 
+def camera_device(camera: CameraConfig) -> str:
+    return camera.device or "/dev/video0"
+
+
 def _source_clause(camera: CameraConfig) -> str:
     system = platform.system()
     if system == "Darwin":
         return "avfvideosrc device-index=0"
     if system == "Linux":
-        return f"v4l2src device={camera.device or '/dev/video0'}"
+        return f"v4l2src device={camera_device(camera)}"
     raise RuntimeError(f"Unsupported platform: {system}")
 
 

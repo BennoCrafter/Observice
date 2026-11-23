@@ -111,7 +111,7 @@ def status() -> dict:
     _, state = run("systemctl", "is-active", "observice")
     _, show = run("systemctl", "show", "-p", "ActiveEnterTimestamp", "-p", "NRestarts", "observice")
     _, commit = run("git", "log", "-1", "--format=%h %s (%cr)")
-    _, logs = run("journalctl", "-u", "observice", "-n", "150", "--no-pager", "-o", "cat")
+    _, logs = run("journalctl", "-u", "observice", "-n", "300", "--no-pager", "-o", "cat")
     props = dict(line.split("=", 1) for line in show.splitlines() if "=" in line)
     return {
         "state": state,

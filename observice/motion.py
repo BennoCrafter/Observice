@@ -9,6 +9,10 @@ from observice.config import MotionConfig
 
 logger = logging.getLogger("observice")
 
+# Consecutive unreadable polls before giving up; the camera is stalled, and a
+# service restart (systemd Restart=on-failure) is what brings it back.
+MAX_FAILED_READS = 3
+
 
 def frame_changed(prev: np.ndarray, curr: np.ndarray, threshold: float) -> bool:
     if prev.shape != curr.shape:
@@ -31,16 +35,21 @@ async def run_motion_loop(
     # cv2.VideoCapture read in a background thread instead.
     """
     prev_frame = None
+    failed_reads = 0
     while True:
         if motion.enabled:
             cap = cv2.VideoCapture(stream_url)
             ok, frame = cap.read()
             cap.release()
             if ok:
+                failed_reads = 0
                 if prev_frame is not None and frame_changed(prev_frame, frame, motion.threshold):
                     logger.info("Motion detected")
                     await on_change(frame)
                 prev_frame = frame
             else:
-                logger.warning("Could not read frame from %s", stream_url)
+                failed_reads += 1
+                logger.warning("Could not read frame from %s (%d/%d)", stream_url, failed_reads, MAX_FAILED_READS)
+                if failed_reads >= MAX_FAILED_READS:
+                    raise RuntimeError("Camera stream stalled, exiting so systemd restarts the service")
         await asyncio.sleep(motion.check_interval)

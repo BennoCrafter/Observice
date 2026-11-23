@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+import platform
 import signal
 import socket
 import tempfile
@@ -9,12 +11,13 @@ from pathlib import Path
 import cv2
 from gi.repository import GLib
 
-from observice.capture import RTSPServer
+from observice.capture import RTSPServer, camera_device
 from observice.config import load_config
 from observice.discord_notify import send_image
 from observice.logger import setup_logger
 from observice.motion import run_motion_loop
 from observice.mqtt_bridge import MqttBridge
+from observice.watchdog import watch_device
 
 CONFIG_PATH = Path("assets/config.yaml")
 
@@ -41,6 +44,15 @@ async def main() -> None:
     glib_loop = GLib.MainLoop()
     threading.Thread(target=glib_loop.run, daemon=True).start()
     logger.info("RTSP stream ready at rtsp://%s:%s/cam", lan_ip(), rtsp.port)
+
+    if platform.system() == "Linux":
+        device = camera_device(config.camera)
+
+        def camera_lost() -> None:
+            logger.error("Camera %s disconnected (USB reset?), exiting so systemd restarts the service", device)
+            os._exit(1)  # main thread may sit in a blocking cv2 read; a clean shutdown could hang
+
+        threading.Thread(target=watch_device, args=(device, camera_lost), daemon=True).start()
 
     bridge = MqttBridge(config, CONFIG_PATH) if config.mqtt.enabled else None
     if bridge:

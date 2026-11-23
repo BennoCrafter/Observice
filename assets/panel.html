@@ -26,7 +26,7 @@
   main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 16px;
          padding: 16px 24px 32px; max-width: 1400px; margin: 0 auto; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 14px 16px; } }
-  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; align-self: start; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
   .feed { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; border-radius: 8px; display: block; }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 0 14px; font-size: 14px; }
@@ -41,16 +41,19 @@
         font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
         max-height: 420px; overflow-y: auto; }
   pre:empty { display: none; }
+  pre.logpane { margin: 0; height: min(72vh, 760px); max-height: none; font-size: 12.5px; }
   .stack { display: grid; gap: 16px; align-content: start; }
-  fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px 12px; }
-  legend { font-weight: 600; padding: 0 4px; text-transform: capitalize; }
-  label { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; }
+  details { border-bottom: 1px solid var(--line); }
+  details:last-child { border-bottom: 0; margin-bottom: 10px; }
+  summary { cursor: pointer; padding: 8px 2px; font-size: 14px; font-weight: 600; text-transform: capitalize; }
+  details[open] { padding-bottom: 8px; }
+  label { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; margin-top: 5px; font-size: 13px; }
   label span { color: var(--muted); overflow-wrap: anywhere; }
-  input[type=text], input[type=number], input[type=password] { font: inherit; font-size: 14px; width: 100%;
-         padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  input[type=text], input[type=number], input[type=password] { font: inherit; font-size: 13px; width: 100%;
+         padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
   input[type=checkbox] { width: 18px; height: 18px; justify-self: start; accent-color: var(--accent); }
   .msg { font-size: 14px; margin-top: 10px; } .msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
-  meter { display: block; width: 100%; max-width: 180px; height: 8px; margin-top: 4px; }
+  meter:not([hidden]) { display: block; width: 100%; max-width: 180px; height: 8px; margin-top: 4px; }
   ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
 </style>
 </head>
@@ -91,15 +94,15 @@
   </div>
 
   <section>
+    <h2>Logs</h2>
+    <pre id="logs" class="logpane">Loading…</pre>
+  </section>
+
+  <section>
     <h2>Configuration</h2>
     <form id="config"></form>
     <div class="row"><button id="save" class="primary" type="button">Save &amp; restart</button></div>
     <p class="msg" id="config-msg" role="status"></p>
-  </section>
-
-  <section>
-    <h2>Logs</h2>
-    <pre id="logs">Loading…</pre>
   </section>
 </main>
 
@@ -153,8 +156,8 @@ async function loadConfig() {
   const form = $("config");
   form.replaceChildren();
   for (const [section, values] of Object.entries(config)) {
-    const fs = document.createElement("fieldset");
-    fs.innerHTML = `<legend>${section}</legend>`;
+    const fs = document.createElement("details");
+    fs.innerHTML = `<summary>${section}</summary>`;
     for (const [key, value] of Object.entries(values)) {
       const label = document.createElement("label");
       const input = document.createElement("input");
