@@ -74,6 +74,19 @@ sudo crontab -e
 |           | `host/port`      | Your MQTT broker (the HA "Mosquitto broker" add-on, typically)        |
 |           | `username/password` | Broker credentials, if required                                    |
 |           | `base_topic`     | MQTT topic prefix (default `observice/camera`) — also names the HA device; use a unique one per instance, e.g. `observice/frontdoor` |
+| `panel`   | `port`           | Web panel port (default `8080`)                                        |
+|           | `password`       | Basic-auth password for the panel; empty = no login                    |
+
+## Web panel
+
+`install-pi.sh` also installs `observice-panel`, a small dashboard at `http://<pi-ip>:8080` with:
+
+- a live preview of the camera (MJPEG, 5 fps — HA still gets the full RTSP stream)
+- service status, restart count and the latest logs
+- a form to edit `assets/config.yaml` (validated, then the camera service restarts)
+- **Check for updates** / **Pull & restart**: `git pull --ff-only`, reinstall requirements, restart both services
+
+Set `panel.password` in the config (any username works) — anyone who can open the panel can see the config's secrets and update the code. The installer adds a sudoers rule that allows exactly the two `systemctl restart` commands the panel needs.
 
 ## Home Assistant setup
 

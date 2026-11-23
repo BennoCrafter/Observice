@@ -39,11 +39,18 @@ class MqttConfig:
 
 
 @dataclass
+class PanelConfig:
+    port: int = 8080
+    password: str = ""  # HTTP basic auth password (any username). Empty = no login.
+
+
+@dataclass
 class Config:
     camera: CameraConfig = field(default_factory=CameraConfig)
     motion: MotionConfig = field(default_factory=MotionConfig)
     discord: DiscordConfig = field(default_factory=DiscordConfig)
     mqtt: MqttConfig = field(default_factory=MqttConfig)
+    panel: PanelConfig = field(default_factory=PanelConfig)
 
 
 def _from_dict(data_class, data: dict):

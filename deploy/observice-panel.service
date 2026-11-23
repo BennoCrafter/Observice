@@ -1,0 +1,14 @@
+[Unit]
+Description=Observice web panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/observice
+ExecStart=/opt/observice/venv/bin/python -m observice.panel
+Restart=on-failure
+RestartSec=5
+User=pi
+
+[Install]
+WantedBy=multi-user.target

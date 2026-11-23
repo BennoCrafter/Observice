@@ -23,3 +23,7 @@ mqtt:
   username: ""
   password: ""
   base_topic: observice/camera
+
+panel:
+  port: 8080 # web dashboard: http://<pi-ip>:8080
+  password: "" # basic-auth password (any username); empty = no login

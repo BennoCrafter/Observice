@@ -42,11 +42,23 @@ if ! id -nG "$USER_NAME" | grep -qw video; then
     echo "⚠️  Added $USER_NAME to the video group — reboot for camera access."
 fi
 
-echo "⚙️  Installing systemd service..."
-sed "s/^User=.*/User=$USER_NAME/" "$DIR/deploy/observice.service" | sudo tee /etc/systemd/system/observice.service >/dev/null
-sudo systemctl daemon-reload
-sudo systemctl enable observice
-sudo systemctl restart observice
+echo "⚙️  Installing systemd services..."
+for unit in observice observice-panel; do
+    sed "s/^User=.*/User=$USER_NAME/" "$DIR/deploy/$unit.service" | sudo tee /etc/systemd/system/$unit.service >/dev/null
+done
 
-echo "✅ Done. Edit $DIR/assets/config.yaml, then: sudo systemctl restart observice"
+# Lets the web panel restart the services without a password (and nothing else).
+SUDOERS=$(mktemp)
+cat > "$SUDOERS" <<EOS
+$USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl restart observice, /usr/bin/systemctl --no-block restart observice-panel
+EOS
+sudo visudo -cf "$SUDOERS" >/dev/null
+sudo install -m 0440 -o root -g root "$SUDOERS" /etc/sudoers.d/observice-panel
+rm "$SUDOERS"
+
+sudo systemctl daemon-reload
+sudo systemctl enable observice observice-panel
+sudo systemctl restart observice observice-panel
+
+echo "✅ Done. Dashboard: http://$(hostname -I | cut -d' ' -f1):8080 (set panel.password in $DIR/assets/config.yaml)"
 echo "   Logs: journalctl -u observice -f"
