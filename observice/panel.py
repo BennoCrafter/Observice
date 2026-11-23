@@ -6,6 +6,7 @@ it restarts the camera service. Start locally with: python -m observice.panel
 import base64
 import hmac
 import json
+import re
 import subprocess
 import sys
 import time
@@ -83,6 +84,29 @@ def authorized(header: str | None, password: str) -> bool:
     return hmac.compare_digest(given.encode(), password.encode())
 
 
+def wifi() -> dict | None:
+    # --rescan no: report the last scan instead of blocking ~5s on a fresh one
+    # LC_ALL=C: on a German system ACTIVE reads "ja"/"nein" instead of "yes"/"no"
+    _, out = run("env", "LC_ALL=C", "nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,DEVICE", "dev", "wifi", "list", "--rescan", "no")
+    for line in out.splitlines():
+        fields = re.split(r"(?<!\\):", line)  # nmcli -t escapes ":" inside SSIDs as "\:"
+        if len(fields) == 4 and fields[0] == "yes":
+            _, ssid, signal, device = fields
+            return {"ssid": ssid.replace("\\:", ":"), "signal": int(signal), "dbm": _wifi_dbm(device), "device": device}
+    return None
+
+
+def _wifi_dbm(device: str) -> float | None:
+    try:
+        for line in Path("/proc/net/wireless").read_text().splitlines()[2:]:
+            name, _, values = line.partition(":")
+            if name.strip() == device:
+                return float(values.split()[2].rstrip("."))
+    except (OSError, IndexError, ValueError):
+        pass
+    return None
+
+
 def status() -> dict:
     _, state = run("systemctl", "is-active", "observice")
     _, show = run("systemctl", "show", "-p", "ActiveEnterTimestamp", "-p", "NRestarts", "observice")
@@ -94,6 +118,7 @@ def status() -> dict:
         "since": props.get("ActiveEnterTimestamp", ""),
         "restarts": props.get("NRestarts", ""),
         "commit": commit,
+        "wifi": wifi(),
         "logs": logs,
     }
 

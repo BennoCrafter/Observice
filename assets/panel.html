@@ -50,6 +50,7 @@
          padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
   input[type=checkbox] { width: 18px; height: 18px; justify-self: start; accent-color: var(--accent); }
   .msg { font-size: 14px; margin-top: 10px; } .msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
+  meter { display: block; width: 100%; max-width: 180px; height: 8px; margin-top: 4px; }
   ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
 </style>
 </head>
@@ -71,6 +72,7 @@
         <dt>Running since</dt><dd id="since">–</dd>
         <dt>Restarts</dt><dd id="restarts">–</dd>
         <dt>Version</dt><dd id="commit">–</dd>
+        <dt>Wi-Fi</dt><dd><span id="wifi">–</span><meter id="wifi-meter" min="0" max="100" low="40" high="60" optimum="100" hidden></meter></dd>
       </dl>
       <div class="row"><button id="restart">Restart camera service</button></div>
       <p class="msg" id="restart-msg" role="status"></p>
@@ -133,6 +135,10 @@ async function refreshStatus() {
     $("since").textContent = s.since || "–";
     $("restarts").textContent = s.restarts || "–";
     $("commit").textContent = s.commit || "–";
+    const w = s.wifi;
+    $("wifi").textContent = w ? `${w.ssid} · ${w.signal}%${w.dbm != null ? ` (${w.dbm} dBm)` : ""}` : "not connected";
+    $("wifi-meter").hidden = !w;
+    if (w) $("wifi-meter").value = w.signal;
     const logs = $("logs"), atBottom = logs.scrollHeight - logs.scrollTop - logs.clientHeight < 40;
     logs.textContent = s.logs || "(no log output)";
     if (atBottom) logs.scrollTop = logs.scrollHeight;
