@@ -117,10 +117,13 @@ class MqttBridge:
         self.client.will_set(f"{self.base_topic}/status", "offline", retain=True)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
+        self.client.on_connect_fail = self._on_connect_fail
         self.log_handler = MqttLogHandler(self.client, f"{self.base_topic}/log/state")
 
     def connect(self) -> None:
-        self.client.connect(self.config.mqtt.host, self.config.mqtt.port)
+        # Async: the loop thread keeps retrying, so a broker or network that isn't
+        # up yet (e.g. Wi-Fi still reconnecting after a USB reset) can't crash startup.
+        self.client.connect_async(self.config.mqtt.host, self.config.mqtt.port)
         self.client.loop_start()
         logger.addHandler(self.log_handler)
 
@@ -150,6 +153,9 @@ class MqttBridge:
             client.subscribe(f"{self.base_topic}/{object_id}/set")
         self._publish_state()
         logger.info("Connected to MQTT broker at %s:%s", self.config.mqtt.host, self.config.mqtt.port)
+
+    def _on_connect_fail(self, client, userdata):
+        logger.warning("MQTT broker %s:%s unreachable, retrying", self.config.mqtt.host, self.config.mqtt.port)
 
     def _on_message(self, client, userdata, msg):
         object_id = msg.topic.rsplit("/", 2)[-2]
