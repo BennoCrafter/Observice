@@ -2,7 +2,7 @@
 
 <img src="assets/observice.svg" width="96" alt="Observice icon">
 
-Turns a Raspberry Pi with a USB camera into a self-hosted camera watcher: an RTSP stream, motion alerts to Discord, Home Assistant integration over MQTT, and a web panel at `http://observice.local`.
+Turns a Raspberry Pi with a USB camera into a self-hosted camera watcher: an RTSP stream, change detection with snapshots and video clips, alerts to Discord, Home Assistant integration over MQTT, and a web panel at `http://observice.local`.
 
 ## Install
 
@@ -37,34 +37,20 @@ The panel's **Check for updates** / **Update & restart** moves to the newest Git
 ## Home Assistant
 
 1. **Camera**: *Settings → Devices & services → Add integration → Generic Camera*, **Stream source** `rtsp://observice.local:8554/cam`, leave **Still image URL** empty. [Add Camera to HA](https://my.home-assistant.io/redirect/config_flow_start?domain=generic)
-2. **MQTT**: install the *Mosquitto broker* add-on, create an HA user for Observice and put its name/password in `mqtt.username`/`mqtt.password`. Observice then auto-creates a motion sensor, a log sensor, "Motion Detection" and "Discord Notifications" switches and a "Motion Check Interval" number. Changes made in HA are written back to the config.
+2. **MQTT**: install the *Mosquitto broker* add-on, create an HA user for Observice and put its name/password in `mqtt.username`/`mqtt.password`. Observice then auto-creates a motion sensor, a log sensor, "Motion Detection" and "Discord Notifications" switches and a "Motion Cooldown" number. Changes made in HA are written back to the config.
+
+## Change detection
+
+The camera service compares small frames twice a second. When enough of the picture changes, an event starts; it ends after the cooldown without change. Each event gets a snapshot and a clip (a few seconds before the change through its end), shown in the panel's **Changes** list and kept for a configurable number of days in `/opt/observice/recordings/`.
 
 ## Configuration
 
-Edited in the panel; stored in `/opt/observice/assets/config.yaml`.
-
-| Section   | Field            | Meaning                                                              |
-|-----------|------------------|-----------------------------------------------------------------------|
-| `camera`  | `width/height/framerate` | Stream resolution/fps                                        |
-|           | `rtsp_port`      | RTSP port (default `8554`)                                            |
-|           | `device`         | v4l2 device, empty = `/dev/video0`                                    |
-| `motion`  | `enabled`        | Motion detection on/off                                               |
-|           | `check_interval` | Seconds between frame comparisons                                     |
-|           | `threshold`      | Mean pixel difference that counts as "changed"                        |
-| `discord` | `enabled`        | Discord notifications on/off                                          |
-|           | `webhook_url`    | Webhook to post snapshots to                                          |
-|           | `token`          | Bot token, only for `scripts/download_discord_images.py`              |
-|           | `listening_users`| Discord user IDs to @-mention                                         |
-| `mqtt`    | `enabled`        | Home Assistant/MQTT bridge on/off                                     |
-|           | `host/port`      | MQTT broker                                                           |
-|           | `username/password` | Broker credentials                                                 |
-|           | `base_topic`     | Topic prefix, also names the HA device — make it unique per camera, e.g. `observice/frontdoor` |
-| `panel`   | `port`           | Panel port (default `80`)                                             |
-|           | `password`       | Panel password (any username); empty = no login                       |
+Everything is edited in the panel's **Settings** (stored in `/opt/observice/assets/config.yaml`), each field with an explanation. Settings are defined in `observice/config.py`: adding a field there with `setting(...)` is all it takes for it to appear in the panel, validated against its type, range and options.
 
 ## Development
 
-- `observice/main.py` runs the RTSP stream (`capture.py`), motion detection (`motion.py`), Discord (`discord_notify.py`) and MQTT (`mqtt_bridge.py`); `observice/panel.py` is the web panel.
+- `observice/main.py` runs one capture pipeline (`capture.py`) that feeds the RTSP stream, change detection (`motion.py`) and clips (`recordings.py`), plus Discord (`discord_notify.py`) and MQTT (`mqtt_bridge.py`); `observice/panel.py` is the web panel.
+- Work on the panel without a Pi or camera: `python -m observice.panel --demo`, then open http://localhost:8080 (simulated feed, logs and changes; needs `ffmpeg` for sample clips).
 - GStreamer/PyGObject aren't pip packages — see `assets/requirements.txt` for the apt/brew commands.
 - Tests: `pip install -r assets/requirements.txt pytest && pytest tests`
 - `scripts/download_discord_images.py --channel-id <id> --out ./downloads` downloads every image from a Discord channel.
