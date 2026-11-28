@@ -127,7 +127,8 @@ def main() -> None:
         bridge.connect()
 
     events = ChangeEvents(config, bridge)
-    camera = Camera(config.camera, config.recording.pre_roll_seconds, events.on_frame)
+    camera = Camera(config.camera, config.recording.pre_roll_seconds, config.panel.preview_fps,
+                    config.panel.preview_quality, events.on_frame)
     events.camera = camera
     loop = GLib.MainLoop()
     exit_code = 0

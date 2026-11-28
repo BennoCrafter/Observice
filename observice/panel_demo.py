@@ -167,7 +167,7 @@ def install(panel) -> None:
     threading.Thread(target=_simulate, args=(panel.RECORDINGS_DIR,), daemon=True).start()
 
     started = (datetime.now() - timedelta(hours=3)).strftime("%a %Y-%m-%d %H:%M:%S")
-    panel.status = lambda: {"state": "active", "since": started, "restarts": "0", "commit": "v0.2.0 (demo)",
+    panel.status = lambda: {"state": "active", "live": True, "since": started, "restarts": "0", "commit": "v0.2.0 (demo)",
                             "host": "observice", "wifi": {"ssid": "Home", "signal": 72, "dbm": -54.0, "device": "wlan0"}}
     panel.restart_camera = lambda: (True, "Demo: camera service not restarted.")
     # check_updates stays real (git fetch + GitHub releases); only installing is disabled here.

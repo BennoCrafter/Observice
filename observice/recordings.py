@@ -4,10 +4,14 @@ Written by the camera service, read and deleted by the panel.
 """
 import json
 import re
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
 RECORDINGS_DIR = Path("recordings")
+# Latest camera frame as JPEG, written by the camera service and streamed by the panel: the panel then
+# needs no video decoding (on a Pi 3, a second hardware codec user exhausted the GPU memory).
+LIVE_FRAME_PATH = Path("/dev/shm" if Path("/dev/shm").is_dir() else tempfile.gettempdir()) / "observice-live.jpg"
 ID_PATTERN = re.compile(r"^\d{8}-\d{6}(-\d+)?$")  # 20261128-162233, -2 when two start in the same second
 EXTENSIONS = (".json", ".jpg", ".mp4")
 

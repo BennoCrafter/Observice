@@ -28,6 +28,8 @@ PAGE_PATH = Path("assets/panel.html")
 NO_FEED_PATH = Path("assets/no-livefeed.jpeg")
 LOG_PATH = Path("logs/observice_log")  # shared with the camera service (observice/logger.py)
 RECORDINGS_DIR = recordings.RECORDINGS_DIR
+LIVE_FRAME_PATH = recordings.LIVE_FRAME_PATH
+LIVE_FRAME_MAX_AGE = 5  # seconds; older = camera not delivering
 LOG_TAIL_BYTES = 512 * 1024
 LOG_LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ - \S+ - (\w+) - (.*)$")
 MEDIA_PATH = re.compile(r"^/recordings/([\w-]+)\.(jpg|mp4)$")
@@ -145,6 +147,13 @@ def _wifi_dbm(device: str) -> float | None:
     return None
 
 
+def live_frame_fresh() -> bool:
+    try:
+        return time.time() - LIVE_FRAME_PATH.stat().st_mtime < LIVE_FRAME_MAX_AGE
+    except OSError:
+        return False
+
+
 def status() -> dict:
     _, state = run("systemctl", "is-active", "observice")
     _, show = run("systemctl", "show", "-p", "ActiveEnterTimestamp", "-p", "NRestarts", "observice")
@@ -152,6 +161,7 @@ def status() -> dict:
     props = dict(line.split("=", 1) for line in show.splitlines() if "=" in line)
     return {
         "state": state,
+        "live": live_frame_fresh(),
         "since": props.get("ActiveEnterTimestamp", ""),
         "restarts": props.get("NRestarts", ""),
         "commit": commit,
@@ -222,17 +232,6 @@ def update() -> dict:
     logger.info("Updated to %s via panel", check["latest"])
     restart_panel_soon()
     return {"ok": True, "output": "\n\n".join(output)}
-
-
-def preview_pipeline(Gst, url: str, fps: int, jpeg_clause: str):
-    # decodebin picks the Pi's hardware H.264 decoder, and frames are dropped to the preview fps before JPEG
-    # encoding: decoding + encoding every 720p frame in software can't keep up on a Pi 3, so the preview
-    # fell further and further behind. appsink keeps only the newest frame.
-    return Gst.parse_launch(
-        f"rtspsrc location={url} latency=0 protocols=tcp ! rtph264depay ! h264parse ! decodebin ! "
-        f"videorate drop-only=true max-rate={fps} ! videoconvert ! {jpeg_clause} ! "
-        "appsink name=sink max-buffers=1 drop=true sync=false"
-    )
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -365,34 +364,29 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"ok": ok, "output": out or "Saved, camera service restarted."})
 
     def _stream(self) -> None:
-        config = load_config(CONFIG_PATH)
-        url = f"rtsp://127.0.0.1:{config.camera.rtsp_port}/cam"
+        """MJPEG of the camera service's latest frame; no video decoding needed here."""
+        fps = load_config(CONFIG_PATH).panel.preview_fps
         self.send_response(200)
         self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        from observice.capture import Gst, _jpeg_clause  # lazy: keeps the rest of the panel importable without GStreamer
-
-        pipeline = None
+        sent = None
         try:
             while True:
-                if pipeline is None:
-                    pipeline = preview_pipeline(Gst, url, config.panel.preview_fps, _jpeg_clause(config.panel.preview_quality))
-                    pipeline.set_state(Gst.State.PLAYING)
-                sample = pipeline.get_by_name("sink").emit("try-pull-sample", 5 * Gst.SECOND)
-                if sample is None:  # camera service down or restarting
-                    pipeline.set_state(Gst.State.NULL)
-                    pipeline = None
+                if not live_frame_fresh():
                     self._write_frame(NO_FEED_PATH.read_bytes())
-                    time.sleep(3)
+                    sent = None
+                    time.sleep(2)
                     continue
-                buffer = sample.get_buffer()
-                self._write_frame(buffer.extract_dup(0, buffer.get_size()))
+                stamp = LIVE_FRAME_PATH.stat().st_mtime_ns
+                if stamp != sent:
+                    sent = stamp
+                    self._write_frame(LIVE_FRAME_PATH.read_bytes())
+                time.sleep(0.5 / fps)  # check twice per frame
         except (BrokenPipeError, ConnectionResetError):
             pass  # browser closed the tab
-        finally:
-            if pipeline is not None:
-                pipeline.set_state(Gst.State.NULL)
+        except FileNotFoundError:
+            pass  # camera service stopped between the check and the read; the browser reconnects
 
     def _write_frame(self, jpeg: bytes) -> None:
         self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n" % len(jpeg))

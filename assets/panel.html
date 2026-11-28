@@ -321,11 +321,11 @@ function duration(s) {
 }
 
 /* ---------- status ---------- */
-let serviceState = "";
+let serviceState = "", lastStatus = {};
 async function refreshStatus() {
   try {
     const s = await api("/api/status");
-    serviceState = s.state;
+    serviceState = s.state; lastStatus = s;
     $("state").className = "state " + s.state;
     $("state-text").textContent = s.state === "active" ? "Running" : (s.state || "unknown");
     const since = (s.since || "").match(/(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/);  // systemd: "Sat 2026-11-28 16:14:52 CET"
@@ -342,7 +342,7 @@ async function refreshStatus() {
     $("state").className = "state failed";
     $("state-text").textContent = "Panel unreachable";
   }
-  const live = serviceState === "active";
+  const live = serviceState === "unreachable" ? false : !!lastStatus.live;
   $("live-chip").classList.toggle("live", live);
   $("live-text").textContent = live ? "Live" : "Offline";
 }

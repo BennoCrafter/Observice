@@ -1,4 +1,5 @@
 import logging
+import os
 import platform
 import threading
 from collections import deque
@@ -14,6 +15,7 @@ from gi.repository import Gst, GstRtspServer  # noqa: E402
 import numpy as np  # noqa: E402
 
 from observice.config import CameraConfig  # noqa: E402
+from observice.recordings import LIVE_FRAME_PATH  # noqa: E402
 
 Gst.init(None)
 
@@ -61,12 +63,6 @@ def _encoder_clause() -> str:
     return f"videoconvert ! x264enc tune={TUNE} bitrate={BITRATE} speed-preset={SPEED_PRESET} key-int-max={KEY_INT_MAX}"
 
 
-def _jpeg_clause(quality: int) -> str:
-    if Gst.ElementFactory.find("v4l2jpegenc"):  # Pi hardware JPEG encoder
-        return f'v4l2jpegenc extra-controls="c,compression_quality={quality}"'
-    return f"jpegenc quality={quality}"
-
-
 def _flip_clause(camera: CameraConfig) -> str:
     # Only added when needed: rotating 720p in software costs real CPU on a Pi 3.
     clause = ""
@@ -77,10 +73,12 @@ def _flip_clause(camera: CameraConfig) -> str:
     return clause
 
 
-def build_pipeline(camera: CameraConfig) -> str:
+def build_pipeline(camera: CameraConfig, preview_fps: int, preview_quality: int) -> str:
     size = f"width={camera.width},height={camera.height},framerate={camera.framerate}/1"
     # Accept raw or MJPEG: USB webcams often only reach higher resolutions/fps as MJPEG.
-    # One tee feeds the H.264 stream (RTSP + clips), change detection and snapshots.
+    # One tee feeds the H.264 stream (RTSP + clips), change detection and the live JPEG (panel + snapshots).
+    # Only the H.264 encoder uses the Pi's hardware: a Pi 3's 76 MB of GPU memory doesn't fit more codecs,
+    # and running out stalls the camera. JPEG at a few fps is cheap in software.
     return (
         f"{_source_clause(camera)} ! video/x-raw,{size};image/jpeg,{size} ! decodebin ! {_flip_clause(camera)}"
         "tee name=t "
@@ -89,8 +87,8 @@ def build_pipeline(camera: CameraConfig) -> str:
         f"t. ! queue leaky=downstream max-size-buffers=1 ! videorate drop-only=true max-rate={DETECT_FPS} ! "
         f"videoscale ! videoconvert ! video/x-raw,format=GRAY8,width={DETECT_WIDTH},pixel-aspect-ratio=1/1 ! "
         "appsink name=detect emit-signals=true sync=false max-buffers=1 drop=true "
-        f"t. ! queue leaky=downstream max-size-buffers=1 ! videorate drop-only=true max-rate={DETECT_FPS} ! "
-        f"videoconvert ! {_jpeg_clause(85)} ! appsink name=snapshot emit-signals=true sync=false max-buffers=1 drop=true"
+        f"t. ! queue leaky=downstream max-size-buffers=1 ! videorate drop-only=true max-rate={preview_fps} ! "
+        f"videoconvert ! jpegenc quality={preview_quality} ! appsink name=snapshot emit-signals=true sync=false max-buffers=1 drop=true"
     )
 
 
@@ -205,12 +203,13 @@ class ClipRecorder:
 class Camera:
     """The one capture pipeline: feeds RTSP, the clip recorder, change detection and snapshots."""
 
-    def __init__(self, camera: CameraConfig, pre_roll_seconds: int, on_frame: Callable[[np.ndarray], None]):
+    def __init__(self, camera: CameraConfig, pre_roll_seconds: int, preview_fps: int, preview_quality: int,
+                 on_frame: Callable[[np.ndarray], None]):
         self.rtsp = RTSPServer(camera.rtsp_port)
         self.recorder = ClipRecorder(pre_roll_seconds)
         self.on_frame = on_frame
         self.latest_jpeg: bytes | None = None
-        self.pipeline = Gst.parse_launch(build_pipeline(camera))
+        self.pipeline = Gst.parse_launch(build_pipeline(camera, preview_fps, preview_quality))
         self.pipeline.get_by_name("h264").connect("new-sample", self._on_h264)
         self.pipeline.get_by_name("detect").connect("new-sample", self._on_detect)
         self.pipeline.get_by_name("snapshot").connect("new-sample", self._on_snapshot)
@@ -241,4 +240,7 @@ class Camera:
     def _on_snapshot(self, sink) -> Gst.FlowReturn:
         buffer = sink.emit("pull-sample").get_buffer()
         self.latest_jpeg = buffer.extract_dup(0, buffer.get_size())
+        tmp = LIVE_FRAME_PATH.with_suffix(".tmp")
+        tmp.write_bytes(self.latest_jpeg)
+        os.replace(tmp, LIVE_FRAME_PATH)  # atomic: the panel never reads half a frame
         return Gst.FlowReturn.OK
