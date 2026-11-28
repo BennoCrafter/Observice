@@ -6,14 +6,14 @@
 <title>Observice</title>
 <style>
   :root {
-    --bg: #f5f6f8; --card: #ffffff; --sunken: #f8f9fb; --text: #15171c; --muted: #6a7180; --faint: #9aa1ad;
+    --bg: #f5f6f8; --card: #ffffff; --sunken: #f8f9fb; --text: #15171c; --muted: #5f6673; --faint: #5f6673;
     --line: #e5e7eb; --line-strong: #d4d8de; --accent: #2563eb; --accent-soft: #e8efff; --on-accent: #fff;
     --live: #e5383b; --ok: #15935a; --ok-soft: #e4f5ec; --warn: #b86e00; --warn-soft: #fff3dc;
     --bad: #d12f2f; --bad-soft: #fde9e9; --shadow: 0 1px 2px rgb(16 24 40 / .05), 0 1px 3px rgb(16 24 40 / .06);
     --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #101215; --card: #181b20; --sunken: #13161a; --text: #eceef2; --muted: #9aa1ad; --faint: #6a7180;
+    :root { --bg: #101215; --card: #181b20; --sunken: #13161a; --text: #eceef2; --muted: #a3a9b4; --faint: #8a919d;
             --line: #262a31; --line-strong: #343944; --accent: #6b9bff; --accent-soft: #1b2540; --on-accent: #0b1220;
             --live: #ff5a5f; --ok: #3ccf8e; --ok-soft: #12291f; --warn: #f0b24a; --warn-soft: #2e2412;
             --bad: #ff6b6b; --bad-soft: #321718; --shadow: none; }
@@ -60,7 +60,7 @@
           letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgb(0 0 0 / .55); backdrop-filter: blur(6px); }
   .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa1ad; }
   .chip.live .dot { background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
-  .chip.change { background: rgb(217 119 6 / .92); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .chip.change { background: rgb(180 83 9 / .95); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
   .feed-wrap.changing::after { content: ""; position: absolute; inset: 0; border: 3px solid rgb(217 119 6); border-radius: var(--radius); pointer-events: none; }
   @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgb(229 56 59 / .6); } 50% { opacity: .55; box-shadow: 0 0 0 5px rgb(229 56 59 / 0); } }
   @media (prefers-reduced-motion: reduce) { .chip.live .dot { animation: none; } }
@@ -79,7 +79,7 @@
   .thumb .play span { width: 26px; height: 26px; border-radius: 50%; background: rgb(0 0 0 / .5); display: grid; place-items: center; }
   .event .when { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
   .event .what { color: var(--muted); font-size: 12.5px; }
-  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 99px; background: rgb(217 119 6); color: #fff; }
+  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 99px; background: rgb(180 83 9); color: #fff; }
   .empty { color: var(--muted); padding: 28px 16px; text-align: center; font-size: 13.5px; }
   .more { margin: 4px 14px 14px; }
 
