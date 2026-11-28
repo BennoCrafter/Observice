@@ -50,19 +50,40 @@ jobs:
           cd observice/image/src
           sudo OBSERVICE_REF="$OBSERVICE_REF" bash -x ./build_dist
 
-      - name: Compress
+      - name: Compress and write Imager repository
         id: out
+        env:
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
         run: |
-          NAME="observice-${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}-arm64.img"
+          NAME="observice-$TAG-arm64.img"
           sudo mv observice/image/src/workspace/*.img "$NAME"
-          sudo xz -T0 -6 "$NAME"
+          sudo chown "$USER" "$NAME"
+          EXTRACT_SIZE=$(stat -c %s "$NAME")
+          EXTRACT_SHA=$(sha256sum "$NAME" | cut -d' ' -f1)
+          xz -T0 -6 "$NAME"
+          # Imager only offers OS customisation (user, Wi-Fi, SSH) for repository entries with an init_format;
+          # cloudinit-rpi matches the trixie Raspberry Pi OS base. Users add this file under Image Repository.
+          jq -n --arg name "Observice $TAG" \
+            --arg url "https://github.com/${{ github.repository }}/releases/download/$TAG/$NAME.xz" \
+            --argjson extract_size "$EXTRACT_SIZE" --arg extract_sha "$EXTRACT_SHA" \
+            --argjson download_size "$(stat -c %s "$NAME.xz")" --arg download_sha "$(sha256sum "$NAME.xz" | cut -d' ' -f1)" \
+            --arg date "$(date +%F)" \
+            '{os_list: [{
+              name: $name,
+              description: "Camera watcher: RTSP stream, motion alerts, Home Assistant. Panel at http://observice.local",
+              icon: "https://raw.githubusercontent.com/BennoCrafter/Observice/main/assets/observice.png",
+              url: $url, extract_size: $extract_size, extract_sha256: $extract_sha,
+              image_download_size: $download_size, image_download_sha256: $download_sha,
+              release_date: $date, init_format: "cloudinit-rpi",
+              devices: ["pi5-64bit", "pi4-64bit", "pi3-64bit"]
+            }]}' > observice.rpi-imager.json
           echo "file=$NAME.xz" >> "$GITHUB_OUTPUT"
 
       - name: Publish release
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" "${{ steps.out.outputs.file }}" --repo "${{ github.repository }}" --generate-notes
+        run: gh release create "${{ github.ref_name }}" "${{ steps.out.outputs.file }}" observice.rpi-imager.json --repo "${{ github.repository }}" --generate-notes
 
       - name: Upload artifact
         if: github.ref_type != 'tag'

@@ -2,131 +2,74 @@
 
 <img src="assets/observice.svg" width="96" alt="Observice icon">
 
-A small, self-hosted camera-watching service: serves a camera as an RTSP stream, watches it for motion, notifies you when something changes, and integrates with Home Assistant over MQTT.
-
-Point it at any camera — a room, a door, a 3D printer — see **Make it yours** below for what to change.
-
-## How it fits together
-
-- **RTSP stream** (`observice/capture.py`): a GStreamer RTSP server publishes the camera at `rtsp://<host>:8554/cam`. Home Assistant (or VLC, `ffplay`, ...) can watch it directly — no extra code needed on either side.
-- **Motion detection** (`observice/motion.py`): polls that stream on an interval, diffs consecutive frames, and fires a callback when they differ enough.
-- **Discord** (`observice/discord_notify.py`): posts the frame that triggered motion to a Discord webhook, optionally @-mentioning a list of user IDs.
-- **Home Assistant** (`observice/mqtt_bridge.py`): publishes MQTT-discovery entities (motion sensor, two switches, one number) so HA auto-creates them, and listens for HA pushing those settings back — that's how you can flip "Discord Notifications" or change the check interval from the HA UI.
-- **`observice/config.py`**: one `assets/config.yaml`, loaded once at startup; changes made from HA are written back to this file so they survive a restart.
+Turns a Raspberry Pi with a USB camera into a self-hosted camera watcher: an RTSP stream, motion alerts to Discord, Home Assistant integration over MQTT, and a web panel at `http://observice.local`.
 
 ## Install
 
-### Option 0 — flash the ready-made image (Raspberry Pi 3/4/5, Zero 2 W)
+### Flash the image (Raspberry Pi 3, 4, 5, Zero 2 W)
 
-1. Download `observice-<version>-arm64.img.xz` from the [latest release](https://github.com/BennoCrafter/Observice/releases/latest).
-2. In Raspberry Pi Imager choose *Use custom* → that file, then in *OS customisation* set a user, Wi-Fi, SSH (and optionally a hostname — default `observice`).
-3. Plug in the camera, boot, open `http://observice.local` and fill in Discord/MQTT in the config editor — then set `panel.password` there, the panel is open to your LAN until you do.
+1. Install [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
+2. Open its app options → **Image Repository** → **Edit**, and enter:
+   ```
+   https://github.com/BennoCrafter/Observice/releases/latest/download/observice.rpi-imager.json
+   ```
+   (Use this instead of *Use custom* with a downloaded file — only the repository entry lets Imager set up your user and Wi-Fi.)
+3. Choose your Pi, then **Observice** as the OS, then your SD card.
+4. In the customisation steps, set a username/password, your Wi-Fi and enable SSH. Leave the hostname as `observice` (change it if you run more than one).
+5. Write the card, plug the camera into the Pi and power it on.
+6. After a minute or two open **http://observice.local**, fill in Discord/MQTT in the config editor and set a panel password — until you do, anyone on your network can open the panel.
 
-Observice runs as the system user `observice` from `/opt/observice`. The image is built with [CustomPiOS](https://github.com/guysoft/CustomPiOS) from `image/`: pushing a `v*` tag builds it in GitHub Actions and publishes the release; `image/build.sh` builds one locally with Docker.
+To get the normal Raspberry Pi OS list back in Imager, reset the Image Repository to its default.
 
-Otherwise pick one of the two paths below. Either way, first:
+### Or: install on an existing Raspberry Pi OS
 
-1. Plug in a USB (or CSI) camera to whatever host you're running on, make sure `/dev/video0` exists (`ls /dev/video0`).
-2. `cp assets/default_config.yaml assets/config.yaml` and fill in your Discord webhook URL / bot token and MQTT broker details (see **Configuration** below). Option A's installer does the copy for you.
-
-### Option A — systemd (recommended on a Raspberry Pi)
-
-Running directly on the host avoids container/GStreamer version mismatches (see the note in the Dockerfile) and gives simpler camera access.
-
-Run as your normal user (not root) — it clones to `/opt/observice`, installs the apt packages, creates a venv (Pi OS blocks system-wide `pip`), adds you to the `video` group and installs the systemd service running as you. It checks out the newest GitHub release (`v*` tag; `main` until one exists). Re-run it to update.
+Run as your normal user (not root):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BennoCrafter/Observice/main/install-pi.sh | bash
-nano /opt/observice/assets/config.yaml   # fill in Discord/MQTT
-sudo systemctl restart observice
-journalctl -u observice -f               # check it started cleanly
 ```
 
-No login or auto-login is needed — the service starts at boot.
+It installs the apt packages and a venv into `/opt/observice`, adds you to the `video` group and sets up two systemd services (`observice`, `observice-panel`) running as you. Then open `http://<pi-ip>` to configure it. Logs: `journalctl -u observice -f`.
 
-### Option B — Docker
+## Updating
 
-```bash
-docker compose build
-docker compose up -d
-docker compose logs -f
-```
+The panel's **Check for updates** / **Update & restart** moves to the newest GitHub release (never an older one). Re-running `install-pi.sh` does the same.
 
-If the container fails on `import gi`, that's the apt-vs-pip Python version mismatch noted in the Dockerfile — use Option A instead.
+## Home Assistant
 
-### Daily reboot (optional)
+1. **Camera**: *Settings → Devices & services → Add integration → Generic Camera*, **Stream source** `rtsp://observice.local:8554/cam`, leave **Still image URL** empty.
+2. **MQTT**: install the *Mosquitto broker* add-on, create an HA user for Observice and put its name/password in `mqtt.username`/`mqtt.password`. Observice then auto-creates a motion sensor, a log sensor, "Motion Detection" and "Discord Notifications" switches and a "Motion Check Interval" number. Changes made in HA are written back to the config.
 
-A crontab line is all a nightly reboot needs:
+## Configuration
 
-```bash
-sudo crontab -e
-# add:
-0 4 * * * /sbin/reboot
-```
-
-## Configuration (`assets/config.yaml`)
+Edited in the panel; stored in `/opt/observice/assets/config.yaml`.
 
 | Section   | Field            | Meaning                                                              |
 |-----------|------------------|-----------------------------------------------------------------------|
 | `camera`  | `width/height/framerate` | Stream resolution/fps                                        |
-|           | `rtsp_port`      | Port the RTSP server listens on (default `8554`)                      |
-|           | `device`         | Linux only: override `/dev/video0` with another v4l2 device path      |
-| `motion`  | `enabled`        | Turn motion detection on/off (also settable from HA)                  |
-|           | `check_interval` | Seconds between frame comparisons (also settable from HA)             |
-|           | `threshold`      | Mean pixel-difference above which a frame counts as "changed"         |
-| `discord` | `enabled`        | Turn Discord notifications on/off (also settable from HA)             |
-|           | `webhook_url`    | Discord webhook to post snapshots to                                  |
-|           | `token`          | Bot token — only used by `scripts/download_discord_images.py`         |
-|           | `listening_users`| Discord user IDs to @-mention on each notification                    |
-| `mqtt`    | `enabled`        | Turn the Home Assistant/MQTT bridge on/off                            |
-|           | `host/port`      | Your MQTT broker (the HA "Mosquitto broker" add-on, typically)        |
-|           | `username/password` | Broker credentials, if required                                    |
-|           | `base_topic`     | MQTT topic prefix (default `observice/camera`) — also names the HA device; use a unique one per instance, e.g. `observice/frontdoor` |
-| `panel`   | `port`           | Web panel port (default `80`)                                          |
-|           | `password`       | Basic-auth password for the panel; empty = no login                    |
-
-## Web panel
-
-`install-pi.sh` also installs `observice-panel`, a small dashboard at `http://<pi-ip>` with:
-
-- a live preview of the camera (MJPEG, 5 fps — HA still gets the full RTSP stream)
-- service status, restart count and the latest logs
-- a form to edit `assets/config.yaml` (validated, then the camera service restarts)
-- **Check for updates** / **Update & restart**: checks out the newest `v*` release tag (never an older one), reinstalls requirements, restarts both services
-
-Set `panel.password` in the config (any username works) — anyone who can open the panel can see the config's secrets and update the code. The installer adds a sudoers rule that allows exactly the two `systemctl restart` commands the panel needs.
-
-## Home Assistant setup
-
-1. **Camera**: the video doesn't go over MQTT — HA pulls the RTSP stream straight from Observice. In HA: *Settings → Devices & services → Add integration → Generic Camera*, set **Stream source** to `rtsp://<pi-ip>:8554/cam`, leave **Still image URL** empty.
-2. **MQTT**: install the *Mosquitto broker* add-on, create an HA user for Observice (*Settings → People → Users*) and put its name/password in `mqtt.username`/`mqtt.password`; then add the *MQTT* integration (HA usually offers it automatically). Once Observice connects, it auto-publishes discovery entities under `homeassistant/...` — a motion sensor, a "Log" sensor (latest log line; past lines in its history), a "Motion Detection" switch, a "Discord Notifications" switch, and a "Motion Check Interval" number will appear in HA without any manual YAML.
-3. Flipping those switches/number in HA writes straight back to `assets/config.yaml` on the host.
-
-## Discord image downloader
-
-A one-off script to pull every image ever posted in a Discord channel into a local folder:
-
-```bash
-python scripts/download_discord_images.py --channel-id <channel id> --out ./downloads
-# --token defaults to discord.token in assets/config.yaml if omitted
-```
-
-## Make it yours
-
-Everything here is deliberately plain Python + YAML, not framework-locked, so repurposing it is mostly config and small, obvious edits:
-
-- **Different camera / location**: just a config change — edit `camera.device` (and `assets/config.yaml`'s `mqtt.base_topic`, so it doesn't collide with another instance) to point at a different room, printer-cam, or device. Run a second instance for a second camera.
-- **Different notification channel**: `observice/discord_notify.py` is a single `send_image()` function — swap it for a Slack webhook, a Telegram bot, an email, whatever; `observice/main.py`'s `on_motion()` callback is the one place that calls it.
-- **Different Home Assistant identity**: the HA device id/name is derived from `mqtt.base_topic` — `observice/frontdoor` shows up as "Observice observice/frontdoor".
-- **Different trigger logic**: `observice/motion.py`'s `frame_changed()` is one small, pure function (frame diff vs. a threshold) — replace it with whatever detection makes sense for your use case (object detection, a specific zone, a different sensor entirely) without touching the RTSP, Discord, or MQTT pieces.
-- **More entities in HA**: `ENTITIES`/`FIELD_MAP` in `observice/mqtt_bridge.py` are a small table, not a framework — add a row to expose another setting to HA.
+|           | `rtsp_port`      | RTSP port (default `8554`)                                            |
+|           | `device`         | v4l2 device, empty = `/dev/video0`                                    |
+| `motion`  | `enabled`        | Motion detection on/off                                               |
+|           | `check_interval` | Seconds between frame comparisons                                     |
+|           | `threshold`      | Mean pixel difference that counts as "changed"                        |
+| `discord` | `enabled`        | Discord notifications on/off                                          |
+|           | `webhook_url`    | Webhook to post snapshots to                                          |
+|           | `token`          | Bot token, only for `scripts/download_discord_images.py`              |
+|           | `listening_users`| Discord user IDs to @-mention                                         |
+| `mqtt`    | `enabled`        | Home Assistant/MQTT bridge on/off                                     |
+|           | `host/port`      | MQTT broker                                                           |
+|           | `username/password` | Broker credentials                                                 |
+|           | `base_topic`     | Topic prefix, also names the HA device — make it unique per camera, e.g. `observice/frontdoor` |
+| `panel`   | `port`           | Panel port (default `80`)                                             |
+|           | `password`       | Panel password (any username); empty = no login                       |
 
 ## Development
 
-Camera capture (`observice/capture.py`, `observice/main.py`) needs GStreamer + PyGObject, which aren't pip packages — see the apt/brew commands in `assets/requirements.txt`. Everything else (`config.py`, `motion.py`, `discord_notify.py`, `mqtt_bridge.py`) has no hardware dependency and is covered by the self-checks in `tests/`:
+- `observice/main.py` runs the RTSP stream (`capture.py`), motion detection (`motion.py`), Discord (`discord_notify.py`) and MQTT (`mqtt_bridge.py`); `observice/panel.py` is the web panel.
+- GStreamer/PyGObject aren't pip packages — see `assets/requirements.txt` for the apt/brew commands.
+- Tests: `pip install -r assets/requirements.txt pytest && pytest tests`
+- `scripts/download_discord_images.py --channel-id <id> --out ./downloads` downloads every image from a Discord channel.
 
-```bash
-pip install -r assets/requirements.txt
-PYTHONPATH=. python tests/test_motion.py
-PYTHONPATH=. python tests/test_mqtt_bridge.py
-```
+### Releasing
+
+Push a `v*` tag (`git tag v0.2.0 && git push --tags`). GitHub Actions builds the image with [CustomPiOS](https://github.com/guysoft/CustomPiOS) from `image/` (~15 min) and publishes a release with the image and the Imager repository file. `image/build.sh` builds the image locally with Docker.
