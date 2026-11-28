@@ -14,7 +14,7 @@ from gi.repository import Gst, GstRtspServer  # noqa: E402
 
 import numpy as np  # noqa: E402
 
-from observice.config import CameraConfig  # noqa: E402
+from observice.config import CameraConfig, PanelConfig  # noqa: E402
 from observice.recordings import LIVE_FRAME_PATH  # noqa: E402
 
 Gst.init(None)
@@ -73,7 +73,7 @@ def _flip_clause(camera: CameraConfig) -> str:
     return clause
 
 
-def build_pipeline(camera: CameraConfig, preview_fps: int, preview_quality: int) -> str:
+def build_pipeline(camera: CameraConfig, preview_width: int, preview_fps: int, preview_quality: int) -> str:
     size = f"width={camera.width},height={camera.height},framerate={camera.framerate}/1"
     # Accept raw or MJPEG: USB webcams often only reach higher resolutions/fps as MJPEG.
     # One tee feeds the H.264 stream (RTSP + clips), change detection and the live JPEG (panel + snapshots).
@@ -88,6 +88,7 @@ def build_pipeline(camera: CameraConfig, preview_fps: int, preview_quality: int)
         f"videoscale ! videoconvert ! video/x-raw,format=GRAY8,width={DETECT_WIDTH},pixel-aspect-ratio=1/1 ! "
         "appsink name=detect emit-signals=true sync=false max-buffers=1 drop=true "
         f"t. ! queue leaky=downstream max-size-buffers=1 ! videorate drop-only=true max-rate={preview_fps} ! "
+        f"videoscale ! video/x-raw,width={preview_width},pixel-aspect-ratio=1/1 ! "
         f"videoconvert ! jpegenc quality={preview_quality} ! appsink name=snapshot emit-signals=true sync=false max-buffers=1 drop=true"
     )
 
@@ -203,13 +204,13 @@ class ClipRecorder:
 class Camera:
     """The one capture pipeline: feeds RTSP, the clip recorder, change detection and snapshots."""
 
-    def __init__(self, camera: CameraConfig, pre_roll_seconds: int, preview_fps: int, preview_quality: int,
+    def __init__(self, camera: CameraConfig, pre_roll_seconds: int, preview: PanelConfig,
                  on_frame: Callable[[np.ndarray], None]):
         self.rtsp = RTSPServer(camera.rtsp_port)
         self.recorder = ClipRecorder(pre_roll_seconds)
         self.on_frame = on_frame
         self.latest_jpeg: bytes | None = None
-        self.pipeline = Gst.parse_launch(build_pipeline(camera, preview_fps, preview_quality))
+        self.pipeline = Gst.parse_launch(build_pipeline(camera, preview.preview_width, preview.preview_fps, preview.preview_quality))
         self.pipeline.get_by_name("h264").connect("new-sample", self._on_h264)
         self.pipeline.get_by_name("detect").connect("new-sample", self._on_detect)
         self.pipeline.get_by_name("snapshot").connect("new-sample", self._on_snapshot)

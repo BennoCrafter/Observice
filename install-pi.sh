@@ -69,10 +69,10 @@ for unit in observice observice-panel; do
     sed "s/^User=.*/User=$USER_NAME/" "$DIR/deploy/$unit.service" | sudo tee /etc/systemd/system/$unit.service >/dev/null
 done
 
-# Lets the web panel restart the services without a password (and nothing else).
+# Lets the web panel restart the services, reboot the Pi and change Wi-Fi (nmcli) without a password, and nothing else.
 SUDOERS=$(mktemp)
 cat > "$SUDOERS" <<EOS
-$USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl restart observice, /usr/bin/systemctl --no-block restart observice-panel
+$USER_NAME ALL=(root) NOPASSWD: /usr/bin/systemctl restart observice, /usr/bin/systemctl --no-block restart observice-panel, /usr/bin/systemctl reboot, /usr/bin/nmcli
 EOS
 sudo visudo -cf "$SUDOERS" >/dev/null
 sudo install -m 0440 -o root -g root "$SUDOERS" /etc/sudoers.d/observice-panel

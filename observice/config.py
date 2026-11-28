@@ -69,6 +69,8 @@ class MqttConfig:
 class PanelConfig:
     port: int = setting(80, "Port", "Panel address: http://<host>:<port>.", min=1, max=65535)
     password: str = setting("", "Password", "Login for this panel (any username). Empty = no login.", secret=True)
+    preview_width: int = setting(640, "Preview width", "Live preview here and snapshots. Smaller loads faster over a weak Wi-Fi; clips keep full size.",
+                                 unit="px", min=320, max=1920)
     preview_fps: int = setting(5, "Preview frame rate", "Live preview here only; Home Assistant gets the full stream.", unit="fps", min=1, max=15)
     preview_quality: int = setting(70, "Preview quality", "JPEG quality of the live preview.", unit="%", min=10, max=100)
 

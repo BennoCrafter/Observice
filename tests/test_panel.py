@@ -3,7 +3,8 @@ import os
 import subprocess
 import tempfile
 
-from observice.panel import authorized, check_updates, parse_config, parse_log
+from observice import panel
+from observice.panel import _nmcli_fields, authorized, check_updates, parse_config, parse_log
 
 
 def _basic(password: str) -> str:
@@ -82,9 +83,23 @@ def test_parse_log_groups_tracebacks():
     assert entries[1]["message"].endswith("ValueError: boom")
 
 
+def test_wifi_networks_parsing():
+    assert _nmcli_fields(r"Cafe\: Gast:57:WPA2:wlan1") == ["Cafe: Gast", "57", "WPA2", "wlan1"]
+    original = panel.run
+    panel.run = lambda *cmd, **kw: (True, "HomeNet:49:WPA2:wlan0\nHomeNet:60:WPA2:wlan1\nHomeNet:30:WPA2:wlan1\n:40:WPA2:wlan1\nOpen:70::wlan1")
+    try:
+        networks = panel.wifi_networks()
+    finally:
+        panel.run = original
+    assert [n["ssid"] for n in networks] == ["Open", "HomeNet"]  # strongest first, hidden SSIDs skipped
+    assert networks[1] == {"ssid": "HomeNet", "secure": True, "signal": {"wlan0": 49, "wlan1": 60}}
+    assert networks[0]["secure"] is False
+
+
 if __name__ == "__main__":
     test_parse_config_accepts_valid_and_rejects_bad_types()
     test_authorized()
     test_check_updates_follows_release_tags()
     test_parse_log_groups_tracebacks()
+    test_wifi_networks_parsing()
     print("ok")

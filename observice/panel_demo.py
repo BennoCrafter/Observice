@@ -168,9 +168,20 @@ def install(panel) -> None:
 
     started = (datetime.now() - timedelta(hours=3)).strftime("%a %Y-%m-%d %H:%M:%S")
     panel.status = lambda: {"state": "active", "live": True, "since": started, "restarts": "0", "commit": "v0.2.0 (demo)",
-                            "host": "observice", "wifi": {"ssid": "Home", "signal": 72, "dbm": -54.0, "device": "wlan0"}}
+                            "host": "observice"}
     panel.restart_camera = lambda: (True, "Demo: camera service not restarted.")
     # check_updates stays real (git fetch + GitHub releases); only installing is disabled here.
+    adapters = [{"device": "wlan0", "kind": "Built-in", "mac": "", "ssid": None, "signal": None},
+                {"device": "wlan1", "kind": "USB", "mac": "", "ssid": "Home", "signal": 61, "dbm": -63.0}]
+    panel.wifi_adapters = lambda: adapters
+    panel.wifi_networks = lambda rescan=False: [
+        {"ssid": "Home", "secure": True, "signal": {"wlan0": 48, "wlan1": 61}},
+        {"ssid": "Home Guests", "secure": True, "signal": {"wlan0": 40, "wlan1": 55}},
+        {"ssid": "Neighbour", "secure": True, "signal": {"wlan1": 31}},
+    ]
+    panel.wifi_connect = lambda ssid, password, device: logger.info("Demo: would join a Wi-Fi with %s", device)
+    panel.can_admin = lambda: True
+    panel.reboot_soon = lambda: logger.info("Demo: reboot skipped")
     panel.update = lambda: {"ok": False, "output": "Demo: updates are disabled."}
     panel.Handler.server_config = lambda self: panel.load_config(panel.CONFIG_PATH)
     panel.Handler._stream = _stream

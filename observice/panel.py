@@ -5,12 +5,15 @@ it restarts the camera service. Start locally with: python -m observice.panel
 Try it without a camera or GStreamer: python -m observice.panel --demo
 """
 import base64
+import gzip
+import hashlib
 import hmac
 import json
 import re
 import socket
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -34,6 +37,9 @@ LOG_TAIL_BYTES = 512 * 1024
 LOG_LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ - \S+ - (\w+) - (.*)$")
 MEDIA_PATH = re.compile(r"^/recordings/([\w-]+)\.(jpg|mp4)$")
 MEDIA_TYPES = {"jpg": "image/jpeg", "mp4": "video/mp4"}
+WIFI_PROFILE = "observice-wifi"  # the NetworkManager connection the panel creates; others are left as fallback
+SUDO_NMCLI = ("sudo", "-n", "nmcli")
+NO_ADMIN = "Not allowed yet: run the installer once more on the Pi (see README, 'Reboot and Wi-Fi from the panel')."
 
 logger = setup_logger()
 
@@ -46,9 +52,18 @@ def run(*cmd: str, timeout: int = 60) -> tuple[bool, str]:
     return proc.returncode == 0, (proc.stdout + proc.stderr).strip()
 
 
-# Both commands must match the sudoers rule install-pi.sh writes, argument for argument.
+# These sudo commands must match the sudoers rule install-pi.sh writes, argument for argument.
 def restart_camera() -> tuple[bool, str]:
     return run("sudo", "-n", "systemctl", "restart", "observice")
+
+
+def can_admin() -> bool:
+    """False on installs from before the reboot/Wi-Fi sudoers rule; re-running install-pi.sh adds it."""
+    return run("sudo", "-n", "-l", "/usr/bin/systemctl", "reboot")[0]
+
+
+def reboot_soon() -> None:
+    subprocess.Popen(["sh", "-c", "sleep 1; sudo -n systemctl reboot"])  # after the HTTP response is out
 
 
 def restart_panel_soon() -> None:
@@ -124,16 +139,76 @@ def authorized(header: str | None, password: str) -> bool:
     return hmac.compare_digest(given.encode(), password.encode())
 
 
-def wifi() -> dict | None:
-    # --rescan no: report the last scan instead of blocking ~5s on a fresh one
+def _nmcli_fields(line: str) -> list[str]:
+    # nmcli -t separates with ":" and escapes ":" inside values (e.g. SSIDs) as "\\:"
+    return [f.replace("\\:", ":") for f in re.split(r"(?<!\\):", line)]
+
+
+def wifi_adapters() -> list[dict]:
+    """Every Wi-Fi adapter with what it's connected to. kind: Built-in (SDIO on a Pi) or USB."""
+    adapters = {}
+    for dev in sorted(Path("/sys/class/net").glob("wlan*")):
+        bus = (dev / "device" / "subsystem").resolve().name
+        adapters[dev.name] = {"device": dev.name, "kind": "USB" if bus == "usb" else "Built-in",
+                              "mac": (dev / "address").read_text().strip(), "ssid": None, "signal": None}
     # LC_ALL=C: on a German system ACTIVE reads "ja"/"nein" instead of "yes"/"no"
     _, out = run("env", "LC_ALL=C", "nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,DEVICE", "dev", "wifi", "list", "--rescan", "no")
     for line in out.splitlines():
-        fields = re.split(r"(?<!\\):", line)  # nmcli -t escapes ":" inside SSIDs as "\:"
-        if len(fields) == 4 and fields[0] == "yes":
-            _, ssid, signal, device = fields
-            return {"ssid": ssid.replace("\\:", ":"), "signal": int(signal), "dbm": _wifi_dbm(device), "device": device}
-    return None
+        fields = _nmcli_fields(line)
+        if len(fields) == 4 and fields[0] == "yes" and fields[3] in adapters:
+            adapters[fields[3]].update(ssid=fields[1], signal=int(fields[2]), dbm=_wifi_dbm(fields[3]))
+    return list(adapters.values())
+
+
+def wifi_networks(rescan: bool = False) -> list[dict]:
+    """Visible networks, strongest first: one entry per SSID with its best signal per adapter."""
+    nmcli = SUDO_NMCLI if rescan else ("nmcli",)  # a fresh scan needs root for a service user
+    _, out = run("env", "LC_ALL=C", *nmcli, "-t", "-f", "SSID,SIGNAL,SECURITY,DEVICE", "dev", "wifi", "list",
+                 "--rescan", "yes" if rescan else "no", timeout=30)
+    networks: dict[str, dict] = {}
+    for line in out.splitlines():
+        fields = _nmcli_fields(line)
+        if len(fields) != 4 or not fields[0]:
+            continue
+        ssid, signal, security, device = fields[0], int(fields[1]), fields[2], fields[3]
+        net = networks.setdefault(ssid, {"ssid": ssid, "secure": bool(security.strip("- ")), "signal": {}})
+        net["signal"][device] = max(signal, net["signal"].get(device, 0))
+    return sorted(networks.values(), key=lambda n: -max(n["signal"].values()))
+
+
+def wifi_connect(ssid: str, password: str, device: str) -> None:
+    """Joins `ssid` with the adapter `device`; meant to run in a background thread.
+
+    Safe against typos: existing connections stay; if the new one doesn't come up, it's deleted again
+    and NetworkManager reconnects the old way. On success the other adapter is left unused, and power
+    saving is off (it made a USB adapter answer hundreds of ms late).
+    """
+    adapter = next(a for a in wifi_adapters() if a["device"] == device)
+    run(*SUDO_NMCLI, "connection", "delete", WIFI_PROFILE)
+    args = ["connection", "add", "type", "wifi", "con-name", WIFI_PROFILE, "ssid", ssid,
+            "802-11-wireless.mac-address", adapter["mac"], "802-11-wireless.powersave", "2",
+            "connection.autoconnect-priority", "10"]
+    if password:
+        args += ["wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", password]
+    ok, out = run(*SUDO_NMCLI, *args)
+    if ok:
+        ok, out = run(*SUDO_NMCLI, "--wait", "40", "connection", "up", WIFI_PROFILE, timeout=60)
+    if not ok:
+        run(*SUDO_NMCLI, "connection", "delete", WIFI_PROFILE)
+        # No network name in logs: they end up in Home Assistant and get shared when asking for help.
+        logger.error("Could not join the Wi-Fi with the %s adapter (%s), kept the old connection: %s",
+                     adapter["kind"], device, out.replace(ssid, "<network>"))
+        return
+    # Keep the other Wi-Fi profiles as fallback, but on this adapter only, so the other one stays idle.
+    _, profiles = run("nmcli", "-t", "-f", "NAME,TYPE", "connection", "show")
+    for fields in map(_nmcli_fields, profiles.splitlines()):
+        if len(fields) == 2 and fields[1] == "802-11-wireless" and fields[0] != WIFI_PROFILE:
+            run(*SUDO_NMCLI, "connection", "modify", fields[0],
+                "802-11-wireless.mac-address", adapter["mac"], "802-11-wireless.powersave", "2")
+    for other in wifi_adapters():
+        if other["device"] != device:
+            run(*SUDO_NMCLI, "device", "disconnect", other["device"])
+    logger.info("Joined the Wi-Fi with the %s adapter (%s)", adapter["kind"], device)
 
 
 def _wifi_dbm(device: str) -> float | None:
@@ -166,7 +241,6 @@ def status() -> dict:
         "restarts": props.get("NRestarts", ""),
         "commit": commit,
         "host": socket.gethostname(),
-        "wifi": wifi(),
     }
 
 
@@ -239,10 +313,22 @@ class Handler(BaseHTTPRequestHandler):
         pass  # status polling would flood the journal
 
     def _send(self, code: int, body: bytes, content_type: str) -> None:
+        # Over a weak Wi-Fi every byte counts: unchanged responses (most polls) become a bodiless 304
+        # via ETag, the rest are gzipped. "no-cache" lets the browser keep them but always revalidate.
+        etag = '"%s"' % hashlib.sha1(body).hexdigest()[:16]
+        if code == 200 and self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.end_headers()
+            return
         self.send_response(code)
         self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("ETag", etag)
+        if len(body) > 1024 and "gzip" in self.headers.get("Accept-Encoding", ""):
+            body = gzip.compress(body, compresslevel=5)
+            self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -277,6 +363,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"events": recordings.list_events(RECORDINGS_DIR, before)})
         elif url.path == "/api/updates":
             self._json(check_updates())
+        elif url.path == "/api/wifi":
+            rescan = query.get("rescan") == ["1"]
+            self._json({"adapters": wifi_adapters(), "networks": wifi_networks(rescan), "can_admin": can_admin()})
         elif url.path == "/stream.mjpg":
             self._stream()
         elif media and recordings.ID_PATTERN.match(media[1]):
@@ -298,6 +387,15 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": ok, "output": out})
         elif self.path == "/api/update":
             self._json(update())
+        elif self.path == "/api/reboot":
+            if not can_admin():
+                self._json({"ok": False, "output": NO_ADMIN})
+                return
+            logger.info("Rebooting via panel")
+            self._json({"ok": True})
+            reboot_soon()
+        elif self.path == "/api/wifi":
+            self._join_wifi()
         elif self.path == "/api/events/delete":
             event_id = self._body().get("id", "")
             ok = recordings.delete_event(RECORDINGS_DIR, event_id)
@@ -306,6 +404,21 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": ok})
         else:
             self._send(404, b"not found", "text/plain")
+
+    def _join_wifi(self) -> None:
+        body = self._body()
+        ssid, password, device = body.get("ssid", ""), body.get("password", ""), body.get("device", "")
+        if not can_admin():
+            self._json({"ok": False, "output": NO_ADMIN})
+        elif not 0 < len(ssid.encode()) <= 32 or (password and not 8 <= len(password) <= 63):
+            self._json({"ok": False, "output": "Network name must be 1-32 bytes, password 8-63 characters."})
+        elif device not in {a["device"] for a in wifi_adapters()}:
+            self._json({"ok": False, "output": f"No Wi-Fi adapter {device!r}."})
+        else:
+            # Answer first: switching networks or adapters can change the Pi's address mid-request.
+            self._json({"ok": True})
+            logger.info("Joining a Wi-Fi with %s via panel", device)
+            threading.Thread(target=wifi_connect, args=(ssid, password, device), daemon=True).start()
 
     def _body(self):
         return json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")

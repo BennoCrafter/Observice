@@ -124,8 +124,13 @@
   .state .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
   .state.active .dot { background: var(--ok); } .state.failed .dot, .state.inactive .dot { background: var(--bad); }
   .state.activating .dot { background: var(--warn); }
-  .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; margin-left: 6px; vertical-align: -1px; }
-  .bars i { width: 3px; background: var(--line-strong); border-radius: 1px; } .bars i.on { background: var(--ok); }
+  .adapters { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+  .adapters li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+  .adapters .dev { color: var(--muted); }
+  .wifi-form { display: grid; gap: 12px; padding: 4px 16px 16px; }
+  .wifi-form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .wifi-form .box { width: 100%; }
+  .wifi-form .note { font-size: 12.5px; color: var(--muted); margin: 0; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
   h3.minor { margin: 0 0 10px; font-size: 13px; font-weight: 620; }
   .release { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--sunken); }
@@ -233,10 +238,17 @@
         <dt>Running since</dt><dd id="since">–</dd>
         <dt>Restarts</dt><dd id="restarts">–</dd>
         <dt>Version</dt><dd id="commit">–</dd>
-        <dt>Wi-Fi</dt><dd><span id="wifi">–</span><span class="bars" id="bars" hidden><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span></dd>
       </dl>
-      <button id="restart">Restart camera service</button>
+      <div class="row">
+        <button id="restart">Restart camera service</button>
+        <button id="reboot">Reboot Pi</button>
+      </div>
       <p class="msg" id="restart-msg" role="status"></p>
+      <hr>
+      <h3 class="minor">Wi-Fi</h3>
+      <ul class="adapters" id="adapters"></ul>
+      <button id="wifi-change">Change Wi-Fi…</button>
+      <p class="msg" id="wifi-msg" role="status"></p>
       <hr>
       <h3 class="minor">Updates</h3>
       <button id="check">Check for updates</button>
@@ -283,6 +295,20 @@
     <a class="button" id="player-download" download>Download</a>
     <button class="danger" id="player-delete">Delete</button>
   </div>
+</dialog>
+
+<dialog id="wifi-dialog" aria-labelledby="wifi-title">
+  <div class="dialog-head"><h3 id="wifi-title">Change Wi-Fi</h3><span class="spacer"></span>
+    <button class="ghost" id="wifi-close" aria-label="Close">✕</button></div>
+  <form class="wifi-form" id="wifi-form">
+    <label>Adapter <div class="box"><select id="wifi-device"></select></div></label>
+    <label>Network <div class="box"><select id="wifi-ssid"></select></div></label>
+    <label id="wifi-other-label" hidden>Network name <div class="box"><input id="wifi-other" autocomplete="off" spellcheck="false"></div></label>
+    <label>Password <div class="box"><input id="wifi-password" type="password" autocomplete="off" placeholder="Leave empty for an open network"></div></label>
+    <p class="note">If the new connection doesn't work, the Pi keeps the current one. If the address changes, reopen http://observice.local after a minute.</p>
+    <div class="row"><button class="primary" id="wifi-join" type="submit">Connect</button><button class="ghost" type="button" id="wifi-rescan">Scan again</button></div>
+    <p class="msg" id="wifi-form-msg" role="status"></p>
+  </form>
 </dialog>
 
 <script>
@@ -333,10 +359,6 @@ async function refreshStatus() {
     $("restarts").textContent = s.restarts || "0";
     $("commit").textContent = s.commit || "–";
     $("host-meta").textContent = [s.host, s.commit].filter(Boolean).join(" · ");
-    const w = s.wifi;
-    $("wifi").textContent = w ? `${w.ssid} · ${w.signal}%` : "Not connected";
-    $("bars").hidden = !w;
-    if (w) [...$("bars").children].forEach((bar, i) => bar.classList.toggle("on", w.signal > i * 25));
   } catch {
     serviceState = "unreachable";
     $("state").className = "state failed";
@@ -508,6 +530,68 @@ $("update").onclick = e => busy(e.target, async () => {
   $("later").disabled = false;
 });
 
+$("reboot").onclick = e => busy(e.target, async () => {
+  if (!confirm("Reboot the Raspberry Pi? It's back after about a minute.")) return;
+  const r = await api("/api/reboot", {});
+  say("restart-msg", r.ok, r.ok ? "Rebooting… this page reloads when the Pi is back." : r.output);
+  if (r.ok) waitForPi();
+});
+async function waitForPi() {
+  await new Promise(r => setTimeout(r, 20000));
+  for (;;) {
+    try { await fetch("/api/status", { cache: "no-store" }); location.reload(); return; } catch { await new Promise(r => setTimeout(r, 5000)); }
+  }
+}
+
+/* ---------- Wi-Fi ---------- */
+let wifi = { adapters: [], networks: [] }, canAdmin = true;
+async function refreshWifi(rescan = false) {
+  wifi = await api("/api/wifi" + (rescan ? "?rescan=1" : ""));
+  canAdmin = wifi.can_admin;
+  $("adapters").replaceChildren(...wifi.adapters.map(a => el("li", {},
+    el("span", {}, `${a.kind} `, el("span", { className: "dev", textContent: a.device })),
+    el("span", { textContent: a.ssid ? `${a.ssid} · ${a.signal}%` : "Not in use" }))));
+  if (!canAdmin) say("wifi-msg", false, "Reboot and Wi-Fi changes need a one-time step on the Pi, see README.");
+}
+function fillWifiForm() {
+  const device = $("wifi-device").value || (wifi.adapters.find(a => a.ssid) ?? wifi.adapters[0])?.device;
+  $("wifi-device").replaceChildren(...wifi.adapters.map(a => {
+    const best = Math.max(0, ...wifi.networks.map(n => n.signal[a.device] ?? 0));
+    return el("option", { value: a.device, selected: a.device === device, textContent: `${a.kind} (${a.device})${best ? ` · strongest network ${best}%` : ""}` });
+  }));
+  const dev = $("wifi-device").value, current = wifi.adapters.find(a => a.ssid)?.ssid;
+  const visible = wifi.networks.filter(n => n.signal[dev] != null);
+  $("wifi-ssid").replaceChildren(...visible.map(n => el("option", { value: n.ssid, selected: n.ssid === current,
+    textContent: `${n.ssid} · ${n.signal[dev]}%${n.secure ? "" : " · open"}` })), el("option", { value: "", textContent: "Other network…" }));
+  $("wifi-other-label").hidden = $("wifi-ssid").value !== "";
+}
+$("wifi-change").onclick = async () => {
+  $("wifi-form-msg").textContent = "";
+  fillWifiForm();
+  $("wifi-dialog").showModal();
+};
+$("wifi-close").onclick = () => $("wifi-dialog").close();
+$("wifi-device").onchange = fillWifiForm;
+$("wifi-ssid").onchange = () => { $("wifi-other-label").hidden = $("wifi-ssid").value !== ""; };
+$("wifi-rescan").onclick = e => busy(e.target, async () => {
+  say("wifi-form-msg", true, "Scanning… (takes a few seconds)");
+  await refreshWifi(true);
+  fillWifiForm();
+  $("wifi-form-msg").textContent = "";
+});
+$("wifi-form").onsubmit = e => {
+  e.preventDefault();
+  busy($("wifi-join"), async () => {
+    const ssid = $("wifi-ssid").value || $("wifi-other").value.trim();
+    const r = await api("/api/wifi", { ssid, password: $("wifi-password").value, device: $("wifi-device").value });
+    if (!r.ok) return say("wifi-form-msg", false, r.output);
+    $("wifi-password").value = "";
+    $("wifi-dialog").close();
+    say("wifi-msg", true, "Connecting… this takes up to a minute. If this page stops updating, reopen http://observice.local.");
+    setTimeout(() => refreshWifi(), 45000);
+  });
+};
+
 /* ---------- settings (rendered from the schema in observice/config.py) ---------- */
 let schema = [], saved = {}, activeTab = null;
 async function loadConfig() {
@@ -582,10 +666,18 @@ $("save").onclick = e => busy(e.target, async () => {
 
 
 loadConfig().catch(() => say("config-msg", false, "Could not load settings."));
-refreshStatus(); refreshEvents(); refreshLogs();
-setInterval(refreshStatus, 5000);
-setInterval(refreshEvents, 5000);
-setInterval(refreshLogs, 3000);
+/* Over a weak Wi-Fi: no preview and no polling while the tab is in the background. */
+const feed = document.querySelector(".feed");
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) feed.src = "";
+  else { feed.src = "/stream.mjpg?" + Date.now(); refreshStatus(); refreshEvents(); refreshLogs(); }
+});
+const whileVisible = fn => () => { if (!document.hidden) fn(); };
+refreshStatus(); refreshEvents(); refreshLogs(); refreshWifi();
+setInterval(whileVisible(refreshStatus), 10000);
+setInterval(whileVisible(refreshEvents), 5000);
+setInterval(whileVisible(refreshLogs), 5000);
+setInterval(whileVisible(refreshWifi), 30000);
 </script>
 </body>
 </html>

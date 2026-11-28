@@ -30,6 +30,16 @@ curl -fsSL https://raw.githubusercontent.com/BennoCrafter/Observice/main/install
 
 It installs the apt packages and a venv into `/opt/observice`, adds you to the `video` group and sets up two systemd services (`observice`, `observice-panel`) running as you. Then open `http://<pi-ip>` to configure it. Logs: `journalctl -u observice -f`.
 
+## Reboot and Wi-Fi from the panel
+
+The Service card can reboot the Pi and switch Wi-Fi network or adapter (e.g. a USB Wi-Fi stick with better reception than the built-in one). If a new connection doesn't work, the Pi keeps the old one.
+
+Installs from before v0.2.2 need one extra permission for this. Run the installer once more on the Pi; it keeps your settings and recordings:
+
+```bash
+ssh -t observice@observice.local 'curl -fsSL https://raw.githubusercontent.com/BennoCrafter/Observice/main/install-pi.sh | bash'
+```
+
 ## Updating
 
 The panel's **Check for updates** / **Update & restart** moves to the newest GitHub release. Re-running `install-pi.sh` does the same.
