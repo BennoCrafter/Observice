@@ -170,12 +170,7 @@ def install(panel) -> None:
     panel.status = lambda: {"state": "active", "since": started, "restarts": "0", "commit": "v0.2.0 (demo)",
                             "host": "observice", "wifi": {"ssid": "Home", "signal": 72, "dbm": -54.0, "device": "wlan0"}}
     panel.restart_camera = lambda: (True, "Demo: camera service not restarted.")
-    panel.check_updates = lambda: {"ok": True, "current": "v0.2.0", "latest": "v0.2.1", "available": True, "releases": [
-        {"tag": "v0.2.1", "name": "v0.2.1", "date": datetime.now().isoformat(),
-         "notes": "- Panel: one update button that shows these notes first\n- Clearer live feed: separate badge while a change is happening"},
-        {"tag": "v0.2.0", "name": "v0.2.0", "date": (datetime.now() - timedelta(days=2)).isoformat(),
-         "notes": "## What's new\n- Continuous change detection with **video clips**\n- Redesigned panel\n\n**Full Changelog**: https://github.com/BennoCrafter/Observice/compare/v0.1.3...v0.2.0"},
-    ]}
+    # check_updates stays real (git fetch + GitHub releases); only installing is disabled here.
     panel.update = lambda: {"ok": False, "output": "Demo: updates are disabled."}
     panel.Handler.server_config = lambda self: panel.load_config(panel.CONFIG_PATH)
     panel.Handler._stream = _stream
