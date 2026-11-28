@@ -21,7 +21,8 @@ if [ "$USER_NAME" = root ]; then
 fi
 
 if ! id "$USER_NAME" &>/dev/null; then
-    sudo useradd --system --home-dir "$DIR" --shell /usr/sbin/nologin "$USER_NAME"
+    # Home is not $DIR: Imager moves an existing account's home if its login user has the same name.
+    sudo useradd --system --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin "$USER_NAME"
 fi
 
 echo "📦 Installing system packages..."
