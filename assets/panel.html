@@ -85,7 +85,7 @@
       <h2>Updates</h2>
       <div class="row">
         <button id="check">Check for updates</button>
-        <button id="update" class="primary">Pull &amp; restart</button>
+        <button id="update" class="primary">Update &amp; restart</button>
       </div>
       <p class="msg" id="update-msg" role="status"></p>
       <ul id="pending"></ul>
@@ -210,11 +210,11 @@ $("check").onclick = e => busy(e.target, async () => {
   const r = await api("/api/updates");
   $("pending").replaceChildren(...(r.pending || []).map(c => Object.assign(document.createElement("li"), { textContent: c })));
   if (!r.ok) say("update-msg", false, r.output);
-  else say("update-msg", true, r.pending.length ? `${r.pending.length} new commit(s) available.` : "Up to date.");
+  else say("update-msg", true, r.pending.length ? `${r.latest} available (${r.pending.length} new commit(s)).` : "Up to date.");
 });
 
 $("update").onclick = e => busy(e.target, async () => {
-  if (!confirm("Pull the latest code and restart Observice?")) return;
+  if (!confirm("Update to the latest release and restart Observice?")) return;
   say("update-msg", true, "Updating… this can take a minute.");
   const r = await api("/api/update", {});
   $("update-out").textContent = r.output;

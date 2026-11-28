@@ -1,4 +1,4 @@
-"""Web dashboard: live preview, service status + logs, config editor, git update.
+"""Web dashboard: live preview, service status + logs, config editor, release update.
 
 Runs as its own systemd unit (deploy/observice-panel.service) so it stays up while
 it restarts the camera service. Start locally with: python -m observice.panel
@@ -110,7 +110,7 @@ def _wifi_dbm(device: str) -> float | None:
 def status() -> dict:
     _, state = run("systemctl", "is-active", "observice")
     _, show = run("systemctl", "show", "-p", "ActiveEnterTimestamp", "-p", "NRestarts", "observice")
-    _, commit = run("git", "log", "-1", "--format=%h %s (%cr)")
+    _, commit = run("git", "describe", "--tags", "--always")
     _, logs = run("journalctl", "-u", "observice", "-n", "300", "--no-pager", "-o", "cat")
     props = dict(line.split("=", 1) for line in show.splitlines() if "=" in line)
     return {
@@ -123,17 +123,29 @@ def status() -> dict:
     }
 
 
+def latest_release() -> str:
+    _, tags = run("git", "tag", "-l", "v*", "--sort=-v:refname")
+    return tags.splitlines()[0] if tags else ""
+
+
 def check_updates() -> dict:
-    ok, out = run("git", "fetch", "--quiet")
+    ok, out = run("git", "fetch", "--quiet", "--tags", "--force")
     if not ok:
         return {"ok": False, "output": out}
-    _, pending = run("git", "log", "--format=%h %s", "HEAD..@{u}")
-    return {"ok": True, "pending": pending.splitlines()}
+    tag = latest_release()
+    if not tag:
+        return {"ok": False, "output": "No releases published yet."}
+    # Empty when HEAD already contains the tag, so an install ahead of it is never downgraded.
+    _, pending = run("git", "log", "--format=%h %s", f"HEAD..{tag}")
+    return {"ok": True, "latest": tag, "pending": pending.splitlines()}
 
 
 def update() -> dict:
+    check = check_updates()
+    if not check["ok"] or not check["pending"]:
+        return {"ok": False, "output": check.get("output", "Already on the latest release.")}
     steps = [
-        ("git", "pull", "--ff-only"),
+        ("git", "checkout", "--quiet", check["latest"]),
         (sys.executable, "-m", "pip", "install", "-q", "-r", "assets/requirements.txt"),
         ("sudo", "-n", "systemctl", "restart", "observice"),
     ]
@@ -144,7 +156,7 @@ def update() -> dict:
         if not ok:
             logger.error("Panel update failed at: %s", " ".join(cmd))
             return {"ok": False, "output": "\n\n".join(output)}
-    logger.info("Updated from git via panel")
+    logger.info("Updated to %s via panel", check["latest"])
     restart_panel_soon()
     return {"ok": True, "output": "\n\n".join(output)}
 

@@ -1,6 +1,9 @@
 import base64
+import os
+import subprocess
+import tempfile
 
-from observice.panel import authorized, parse_config
+from observice.panel import authorized, check_updates, parse_config
 
 
 def _basic(password: str) -> str:
@@ -36,7 +39,35 @@ def test_authorized():
     assert not authorized("Basic !!!notbase64", "s3cret")
 
 
+def test_check_updates_follows_release_tags():
+    def git(*args, cwd):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=cwd, check=True, capture_output=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        origin, clone = f"{tmp}/origin", f"{tmp}/clone"
+        git("init", "-q", origin, cwd=tmp)
+        git("commit", "-q", "--allow-empty", "-m", "one", cwd=origin)
+        git("tag", "v0.9.0", cwd=origin)
+        git("commit", "-q", "--allow-empty", "-m", "two", cwd=origin)
+        git("tag", "v0.10.0", cwd=origin)  # version sort, not string sort
+        git("clone", "-q", origin, clone, cwd=tmp)
+        git("checkout", "-q", "v0.9.0", cwd=clone)
+
+        cwd = os.getcwd()
+        os.chdir(clone)
+        try:
+            r = check_updates()
+            assert r["ok"] and r["latest"] == "v0.10.0" and len(r["pending"]) == 1, r
+            git("commit", "-q", "--allow-empty", "-m", "three", cwd=origin)  # main ahead of newest tag
+            git("pull", "-q", "origin", "HEAD", cwd=clone)
+            r = check_updates()
+            assert r["ok"] and r["pending"] == [], r  # never offers a downgrade
+        finally:
+            os.chdir(cwd)
+
+
 if __name__ == "__main__":
     test_parse_config_accepts_valid_and_rejects_bad_types()
     test_authorized()
+    test_check_updates_follows_release_tags()
     print("ok")

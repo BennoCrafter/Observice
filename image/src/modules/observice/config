@@ -1,0 +1,3 @@
+[ -n "$OBSERVICE_REPO" ] || OBSERVICE_REPO=https://github.com/BennoCrafter/observice
+# Git ref baked into the image; empty = newest v* release tag (main if none exists yet).
+[ -n "$OBSERVICE_REF" ] || OBSERVICE_REF=

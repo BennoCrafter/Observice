@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Installs Observice via the repo's own install-pi.sh, as the "observice" system user.
+set -x
+set -e
+
+source /common.sh
+install_cleanup_trap
+
+apt-get update
+apt-get install -y git
+
+git clone "$OBSERVICE_REPO" /opt/observice
+REF=${OBSERVICE_REF:-$(git -C /opt/observice tag -l 'v*' --sort=-v:refname | head -1)}
+# Check out before running the installer so it can't change under the running script.
+if [ -n "$REF" ]; then
+    git -C /opt/observice checkout --quiet "$REF"
+fi
+OBSERVICE_USER=observice OBSERVICE_REF="$REF" /opt/observice/install-pi.sh --no-start
+
+# observice.local via avahi; Imager's hostname setting overrides this.
+echo observice > /etc/hostname
+sed -i 's/\braspberrypi\b/observice/g' /etc/hosts

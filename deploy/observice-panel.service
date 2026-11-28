@@ -9,6 +9,7 @@ ExecStart=/opt/observice/venv/bin/python -m observice.panel
 Restart=on-failure
 RestartSec=5
 User=pi
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target

@@ -16,7 +16,15 @@ Point it at any camera — a room, a door, a 3D printer — see **Make it yours*
 
 ## Install
 
-Pick one of the two paths below. Either way, first:
+### Option 0 — flash the ready-made image (Raspberry Pi 3/4/5, Zero 2 W)
+
+1. Download `observice-<version>-arm64.img.xz` from the [latest release](https://github.com/BennoCrafter/Observice/releases/latest).
+2. In Raspberry Pi Imager choose *Use custom* → that file, then in *OS customisation* set a user, Wi-Fi, SSH (and optionally a hostname — default `observice`).
+3. Plug in the camera, boot, open `http://observice.local` and fill in Discord/MQTT in the config editor — then set `panel.password` there, the panel is open to your LAN until you do.
+
+Observice runs as the system user `observice` from `/opt/observice`. The image is built with [CustomPiOS](https://github.com/guysoft/CustomPiOS) from `image/`: pushing a `v*` tag builds it in GitHub Actions and publishes the release; `image/build.sh` builds one locally with Docker.
+
+Otherwise pick one of the two paths below. Either way, first:
 
 1. Plug in a USB (or CSI) camera to whatever host you're running on, make sure `/dev/video0` exists (`ls /dev/video0`).
 2. `cp assets/default_config.yaml assets/config.yaml` and fill in your Discord webhook URL / bot token and MQTT broker details (see **Configuration** below). Option A's installer does the copy for you.
@@ -25,7 +33,7 @@ Pick one of the two paths below. Either way, first:
 
 Running directly on the host avoids container/GStreamer version mismatches (see the note in the Dockerfile) and gives simpler camera access.
 
-Run as your normal user (not root) — it clones to `/opt/observice`, installs the apt packages, creates a venv (Pi OS blocks system-wide `pip`), adds you to the `video` group and installs the systemd service running as you. Re-run it to update.
+Run as your normal user (not root) — it clones to `/opt/observice`, installs the apt packages, creates a venv (Pi OS blocks system-wide `pip`), adds you to the `video` group and installs the systemd service running as you. It checks out the newest GitHub release (`v*` tag; `main` until one exists). Re-run it to update.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BennoCrafter/Observice/main/install-pi.sh | bash
@@ -74,17 +82,17 @@ sudo crontab -e
 |           | `host/port`      | Your MQTT broker (the HA "Mosquitto broker" add-on, typically)        |
 |           | `username/password` | Broker credentials, if required                                    |
 |           | `base_topic`     | MQTT topic prefix (default `observice/camera`) — also names the HA device; use a unique one per instance, e.g. `observice/frontdoor` |
-| `panel`   | `port`           | Web panel port (default `8080`)                                        |
+| `panel`   | `port`           | Web panel port (default `80`)                                          |
 |           | `password`       | Basic-auth password for the panel; empty = no login                    |
 
 ## Web panel
 
-`install-pi.sh` also installs `observice-panel`, a small dashboard at `http://<pi-ip>:8080` with:
+`install-pi.sh` also installs `observice-panel`, a small dashboard at `http://<pi-ip>` with:
 
 - a live preview of the camera (MJPEG, 5 fps — HA still gets the full RTSP stream)
 - service status, restart count and the latest logs
 - a form to edit `assets/config.yaml` (validated, then the camera service restarts)
-- **Check for updates** / **Pull & restart**: `git pull --ff-only`, reinstall requirements, restart both services
+- **Check for updates** / **Update & restart**: checks out the newest `v*` release tag (never an older one), reinstalls requirements, restarts both services
 
 Set `panel.password` in the config (any username works) — anyone who can open the panel can see the config's secrets and update the code. The installer adds a sudoers rule that allows exactly the two `systemctl restart` commands the panel needs.
 

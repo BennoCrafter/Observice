@@ -1,0 +1,5 @@
+/workspace*
+/image-*
+/config.local
+/custompios_path
+/build.log

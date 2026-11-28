@@ -40,7 +40,7 @@ class MqttConfig:
 
 @dataclass
 class PanelConfig:
-    port: int = 8080
+    port: int = 80
     password: str = ""  # HTTP basic auth password (any username). Empty = no login.
 
 

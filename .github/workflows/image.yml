@@ -1,0 +1,72 @@
+name: Build image
+
+# Push a v* tag to publish a GitHub Release with the flashable image attached.
+# Run manually to get the image as a workflow artifact (newest release, or the ref you enter).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Observice git ref to bake in (empty = newest v* release)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y coreutils p7zip-full qemu-user-binfmt python3-git python3-yaml file xz-utils
+
+      - name: Checkout CustomPiOS
+        uses: actions/checkout@v4
+        with:
+          repository: guysoft/CustomPiOS
+          ref: 70f78ee8e52906595bf6dfb4941c241ede1e7246  # devel as of 2026-11-18; bump deliberately
+          path: CustomPiOS
+
+      - name: Checkout Observice
+        uses: actions/checkout@v4
+        with:
+          path: observice
+
+      - name: Download base image
+        run: |
+          cd observice/image/src
+          ../../../CustomPiOS/src/update-custompios-paths
+          export DIST_PATH=$(pwd) CUSTOM_PI_OS_PATH=$(cat custompios_path)
+          $CUSTOM_PI_OS_PATH/base_image_downloader_wrapper.sh
+
+      - name: Build image
+        env:
+          OBSERVICE_REF: ${{ github.ref_type == 'tag' && github.ref_name || inputs.ref }}
+        run: |
+          sudo modprobe loop
+          cd observice/image/src
+          sudo OBSERVICE_REF="$OBSERVICE_REF" bash -x ./build_dist
+
+      - name: Compress
+        id: out
+        run: |
+          NAME="observice-${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}-arm64.img"
+          sudo mv observice/image/src/workspace/*.img "$NAME"
+          sudo xz -T0 -6 "$NAME"
+          echo "file=$NAME.xz" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" "${{ steps.out.outputs.file }}" --repo "${{ github.repository }}" --generate-notes
+
+      - name: Upload artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: observice-image
+          path: ${{ steps.out.outputs.file }}

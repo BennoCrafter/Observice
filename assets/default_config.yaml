@@ -25,5 +25,5 @@ mqtt:
   base_topic: observice/camera
 
 panel:
-  port: 8080 # web dashboard: http://<pi-ip>:8080
+  port: 80 # web dashboard: http://<pi-ip> (http://observice.local on the image)
   password: "" # basic-auth password (any username); empty = no login

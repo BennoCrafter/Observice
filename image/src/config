@@ -1,0 +1,13 @@
+export DIST_NAME=Observice
+export DIST_VERSION=1.0.0
+export MODULES="base(observice)"
+
+# arm64 Raspberry Pi OS Lite: Pi 3, 4, 5 and Zero 2 W
+export BASE_BOARD=raspberrypiarm64
+
+# No baked-in pi/raspberry login; set user, Wi-Fi and SSH via Raspberry Pi Imager's OS customisation.
+export BASE_ADD_USER=no
+
+# Room for GStreamer + the venv (opencv, numpy) during the build; shrunk again afterwards.
+export BASE_IMAGE_ENLARGEROOT=1500
+export BASE_IMAGE_RESIZEROOT=200
