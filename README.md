@@ -13,7 +13,6 @@ Turns a Raspberry Pi with a USB camera into a self-hosted camera watcher: an RTS
    ```
    https://github.com/BennoCrafter/Observice/releases/latest/download/observice.rpi-imager.json
    ```
-   (Use this instead of *Use custom* with a downloaded file — only the repository entry lets Imager set up your user and Wi-Fi.)
 3. Choose your Pi, then **Observice** as the OS, then your SD card.
 4. In the customisation steps, set a username/password, your Wi-Fi and enable SSH. Leave the hostname as `observice` (change it if you run more than one).
 5. Write the card, plug the camera into the Pi and power it on.
@@ -33,11 +32,11 @@ It installs the apt packages and a venv into `/opt/observice`, adds you to the `
 
 ## Updating
 
-The panel's **Check for updates** / **Update & restart** moves to the newest GitHub release (never an older one). Re-running `install-pi.sh` does the same.
+The panel's **Check for updates** / **Update & restart** moves to the newest GitHub release. Re-running `install-pi.sh` does the same.
 
 ## Home Assistant
 
-1. **Camera**: *Settings → Devices & services → Add integration → Generic Camera*, **Stream source** `rtsp://observice.local:8554/cam`, leave **Still image URL** empty.
+1. **Camera**: *Settings → Devices & services → Add integration → Generic Camera*, **Stream source** `rtsp://observice.local:8554/cam`, leave **Still image URL** empty. [Add Camera to HA](https://my.home-assistant.io/redirect/config_flow_start?domain=generic)
 2. **MQTT**: install the *Mosquitto broker* add-on, create an HA user for Observice and put its name/password in `mqtt.username`/`mqtt.password`. Observice then auto-creates a motion sensor, a log sensor, "Motion Detection" and "Discord Notifications" switches and a "Motion Check Interval" number. Changes made in HA are written back to the config.
 
 ## Configuration
