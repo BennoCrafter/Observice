@@ -84,12 +84,21 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
-        # The notes are what the panel shows before updating: every commit since the previous release.
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        # The notes are what the panel shows before updating. Hand-written notes: create a draft
+        # release for the tag first (gh release create <tag> --draft --notes-file ...); this step then
+        # attaches the image and publishes it. Otherwise the notes are the commits since the last release.
         run: |
-          PREV=$(git -C observice describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || true)
-          git -C observice log --no-merges --format='- %s' "${PREV:+$PREV..}${{ github.ref_name }}" > notes.md
-          gh release create "${{ github.ref_name }}" "${{ steps.out.outputs.file }}" observice.rpi-imager.json \
-            --repo "${{ github.repository }}" --notes-file notes.md
+          FILES=("${{ steps.out.outputs.file }}" observice.rpi-imager.json)
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${FILES[@]}" --repo "$REPO" --clobber
+            gh release edit "$TAG" --repo "$REPO" --draft=false
+          else
+            PREV=$(git -C observice describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+            git -C observice log --no-merges --format='- %s' "${PREV:+$PREV..}$TAG" > notes.md
+            gh release create "$TAG" "${FILES[@]}" --repo "$REPO" --notes-file notes.md
+          fi
 
       - name: Upload artifact
         if: github.ref_type != 'tag'

@@ -57,4 +57,4 @@ Everything is edited in the panel's **Settings** (stored in `/opt/observice/asse
 
 ### Releasing
 
-Push a `v*` tag (`git tag v0.2.0 && git push --tags`). GitHub Actions builds the image with [CustomPiOS](https://github.com/guysoft/CustomPiOS) from `image/` (~15 min) and publishes a release with the image and the Imager repository file. `image/build.sh` builds the image locally with Docker.
+Push a `v*` tag (`git tag v0.2.0 && git push --tags`). For hand-written release notes (shown in the panel before updating), first create a draft: `gh release create v0.2.0 --draft --notes-file notes.md`; otherwise the notes list the commits since the last release. GitHub Actions builds the image with [CustomPiOS](https://github.com/guysoft/CustomPiOS) from `image/` (~15 min) and publishes a release with the image and the Imager repository file. `image/build.sh` builds the image locally with Docker.
