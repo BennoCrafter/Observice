@@ -151,16 +151,16 @@
   .spane { padding: 20px 28px 8px; min-width: 0; }
   .spane h3 { margin: 0; font-size: 16px; font-weight: 640; }
   .spane .lead { margin: 4px 0 8px; color: var(--muted); }
-  .fields { max-width: 760px; }
-  .field { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .fields { max-width: 620px; }
+  .field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .field:last-child { border-bottom: 0; }
   .field .name { font-weight: 560; } .field .help { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
   .control { display: flex; justify-content: flex-end; }
-  .box { display: flex; align-items: center; width: 100%; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--card); transition: border-color .15s, box-shadow .15s; }
+  .box { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--card); transition: border-color .15s, box-shadow .15s; }
   .box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .box:has(input:invalid) { border-color: var(--bad); }
   .box input, .box select { flex: 1; min-width: 0; border: 0; background: transparent; padding: 7px 10px; font-size: 13.5px; outline: none; }
-  .box.short { width: 132px; }  /* numbers and short choices don't need a full-width box */
+  .box { width: 240px; } .box.short { width: 120px; }  /* numbers and short choices don't need a full-width box */
   .box input[type=number] { text-align: right; -moz-appearance: textfield; }
   .box input::-webkit-inner-spin-button, .box input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .box input::placeholder { color: var(--faint); }
