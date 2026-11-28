@@ -7,7 +7,7 @@ import yaml
 def setting(default, label: str, help: str = "", **meta):
     """A config field plus what the panel needs to render and validate it.
 
-    meta: unit, min, max, options (allowed values), secret (masked input).
+    meta: unit, min, max, options (allowed values), secret (masked input), placeholder.
     Adding a field here is all it takes for it to show up in the panel.
     """
     meta = {"label": label, "help": help, **meta}
@@ -22,7 +22,7 @@ class CameraConfig:
     height: int = setting(720, "Height", "Stream height in pixels.", unit="px", min=120, max=2160)
     framerate: int = setting(30, "Frame rate", unit="fps", min=1, max=60)
     rtsp_port: int = setting(8554, "RTSP port", "Home Assistant reads rtsp://<host>:<port>/cam.", min=1, max=65535)
-    device: str = setting("", "Device", "Linux only: v4l2 device path, e.g. /dev/video2. Empty = /dev/video0.")
+    device: str = setting("", "Device", "Linux only: v4l2 device path. Empty = /dev/video0.", placeholder="/dev/video0")
     rotation: int = setting(0, "Rotation", "For cameras mounted sideways or upside down. Costs CPU on a Pi 3.",
                             unit="°", options=[0, 90, 180, 270])
     mirror: bool = setting(False, "Mirror", "Flip the picture horizontally.")
@@ -49,7 +49,8 @@ class RecordingConfig:
 @dataclass
 class DiscordConfig:
     enabled: bool = setting(False, "Send to Discord", "Posts one snapshot per change.")
-    webhook_url: str = setting("", "Webhook URL", secret=True)
+    webhook_url: str = setting("", "Webhook URL", "Channel settings → Integrations → Webhooks.", secret=True,
+                               placeholder="https://discord.com/api/webhooks/…")
     token: str = setting("", "Bot token", "Only used by scripts/download_discord_images.py.", secret=True)
     listening_users: list[int] = setting([], "Mention users", "Discord user IDs to @-mention, comma-separated.")
 
@@ -74,12 +75,18 @@ class PanelConfig:
 
 @dataclass
 class Config:
-    camera: CameraConfig = field(default_factory=CameraConfig, metadata={"label": "Camera"})
-    motion: MotionConfig = field(default_factory=MotionConfig, metadata={"label": "Change detection"})
-    recording: RecordingConfig = field(default_factory=RecordingConfig, metadata={"label": "Recordings"})
-    discord: DiscordConfig = field(default_factory=DiscordConfig, metadata={"label": "Discord"})
-    mqtt: MqttConfig = field(default_factory=MqttConfig, metadata={"label": "Home Assistant"})
-    panel: PanelConfig = field(default_factory=PanelConfig, metadata={"label": "Panel"})
+    camera: CameraConfig = field(default_factory=CameraConfig, metadata={
+        "label": "Camera", "help": "The USB camera and the RTSP stream Home Assistant watches."})
+    motion: MotionConfig = field(default_factory=MotionConfig, metadata={
+        "label": "Change detection", "help": "When a change starts and ends."})
+    recording: RecordingConfig = field(default_factory=RecordingConfig, metadata={
+        "label": "Recordings", "help": "Snapshots and clips of each change, listed under Changes."})
+    discord: DiscordConfig = field(default_factory=DiscordConfig, metadata={
+        "label": "Discord", "help": "Post a snapshot to a Discord channel when something changes."})
+    mqtt: MqttConfig = field(default_factory=MqttConfig, metadata={
+        "label": "Home Assistant", "help": "Motion sensor and switches in Home Assistant via MQTT."})
+    panel: PanelConfig = field(default_factory=PanelConfig, metadata={
+        "label": "Panel", "help": "This web panel."})
 
 
 def schema() -> list[dict]:
@@ -90,7 +97,7 @@ def schema() -> list[dict]:
         for f in fields(section.type):
             default = f.default_factory() if f.default is MISSING else f.default
             items.append({"key": f.name, "type": type(default).__name__, "default": default, **f.metadata})
-        sections.append({"key": section.name, "label": section.metadata["label"], "fields": items})
+        sections.append({"key": section.name, **section.metadata, "fields": items})
     return sections
 
 

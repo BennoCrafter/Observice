@@ -56,3 +56,11 @@ def prune(directory: Path, keep_days: int, now: datetime) -> int:
     for event_id in old:
         delete_event(directory, event_id)
     return len(old)
+
+
+def close_unfinished_events(directory: Path) -> None:
+    # A crash or restart mid-event leaves end=None; without this it would show as in progress forever.
+    for event in list_events(directory, limit=5):
+        if event["end"] is None:
+            event["end"] = datetime.fromtimestamp((directory / f"{event['id']}.json").stat().st_mtime).isoformat(timespec="seconds")
+            write_event(directory, event)

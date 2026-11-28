@@ -15,7 +15,7 @@ from observice.discord_notify import send_image
 from observice.logger import setup_logger
 from observice.motion import EventTracker, changed_percent
 from observice.mqtt_bridge import MqttBridge
-from observice.recordings import RECORDINGS_DIR, list_events, new_event_id, prune, write_event
+from observice.recordings import RECORDINGS_DIR, close_unfinished_events, new_event_id, prune, write_event
 from observice.watchdog import watch_device
 
 CONFIG_PATH = Path("assets/config.yaml")
@@ -32,14 +32,6 @@ def lan_ip() -> str:
             return s.getsockname()[0]
         except OSError:
             return socket.gethostname()
-
-
-def close_unfinished_events(directory: Path) -> None:
-    # A crash or restart mid-event leaves end=None; without this it would show as "live" forever.
-    for event in list_events(directory, limit=5):
-        if event["end"] is None:
-            event["end"] = datetime.fromtimestamp((directory / f"{event['id']}.json").stat().st_mtime).isoformat()
-            write_event(directory, event)
 
 
 class ChangeEvents:

@@ -19,7 +19,7 @@ import cv2
 import numpy as np
 
 from observice.config import Config, PanelConfig, save_config
-from observice.recordings import new_event_id, write_event
+from observice.recordings import close_unfinished_events, new_event_id, write_event
 
 DEMO_DIR = Path(tempfile.gettempdir()) / "observice-demo"
 PORT = 8080
@@ -163,6 +163,7 @@ def install(panel) -> None:
     logger.addHandler(file_log)
     print("Rendering sample clips…", flush=True)
     _seed_events(panel.RECORDINGS_DIR)
+    close_unfinished_events(panel.RECORDINGS_DIR)
     threading.Thread(target=_simulate, args=(panel.RECORDINGS_DIR,), daemon=True).start()
 
     started = (datetime.now() - timedelta(hours=3)).strftime("%a %Y-%m-%d %H:%M:%S")
