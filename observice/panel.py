@@ -14,7 +14,6 @@ from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-import cv2
 
 from observice.config import Config, _from_dict, load_config, save_config
 from observice.logger import setup_logger
@@ -161,6 +160,18 @@ def update() -> dict:
     return {"ok": True, "output": "\n\n".join(output)}
 
 
+def preview_pipeline(Gst, url: str):
+    # decodebin picks the Pi's hardware H.264 decoder, and frames are dropped to PREVIEW_FPS before JPEG
+    # encoding: decoding + encoding every 720p frame in software can't keep up on a Pi 3, so the preview
+    # fell further and further behind. appsink keeps only the newest frame.
+    jpegenc = "v4l2jpegenc" if Gst.ElementFactory.find("v4l2jpegenc") else "jpegenc quality=70"
+    return Gst.parse_launch(
+        f"rtspsrc location={url} latency=0 protocols=tcp ! rtph264depay ! h264parse ! decodebin ! "
+        f"videorate drop-only=true max-rate={PREVIEW_FPS} ! videoconvert ! {jpegenc} ! "
+        "appsink name=sink max-buffers=1 drop=true sync=false"
+    )
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # status polling would flood the journal
@@ -239,25 +250,28 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        cap = cv2.VideoCapture(url)
-        last_sent = 0.0
+        from observice.capture import Gst  # lazy: keeps the rest of the panel importable without GStreamer
+
+        pipeline = None
         try:
             while True:
-                ok, frame = cap.read()  # read every frame so the preview doesn't lag behind
-                if not ok:
+                if pipeline is None:
+                    pipeline = preview_pipeline(Gst, url)
+                    pipeline.set_state(Gst.State.PLAYING)
+                sample = pipeline.get_by_name("sink").emit("try-pull-sample", 5 * Gst.SECOND)
+                if sample is None:  # camera service down or restarting
+                    pipeline.set_state(Gst.State.NULL)
+                    pipeline = None
                     self._write_frame(NO_FEED_PATH.read_bytes())
-                    cap.release()
                     time.sleep(3)
-                    cap = cv2.VideoCapture(url)
                     continue
-                if time.monotonic() - last_sent < 1 / PREVIEW_FPS:
-                    continue
-                last_sent = time.monotonic()
-                self._write_frame(cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])[1].tobytes())
+                buffer = sample.get_buffer()
+                self._write_frame(buffer.extract_dup(0, buffer.get_size()))
         except (BrokenPipeError, ConnectionResetError):
             pass  # browser closed the tab
         finally:
-            cap.release()
+            if pipeline is not None:
+                pipeline.set_state(Gst.State.NULL)
 
     def _write_frame(self, jpeg: bytes) -> None:
         self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n" % len(jpeg))
