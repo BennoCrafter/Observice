@@ -19,6 +19,7 @@
             --bad: #ff6b6b; --bad-soft: #321718; --shadow: none; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }  /* otherwise display: flex etc. on a class overrides the attribute */
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
   button, input, select { font: inherit; color: inherit; }
