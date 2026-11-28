@@ -17,6 +17,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+import requests
+
 from observice import recordings
 from observice.config import Config, _from_dict, load_config, save_config, schema
 from observice.logger import setup_logger
@@ -171,13 +173,39 @@ def check_updates() -> dict:
     if not tag:
         return {"ok": False, "output": "No releases published yet."}
     # Empty when HEAD already contains the tag, so an install ahead of it is never downgraded.
-    _, pending = run("git", "log", "--format=%h %s", f"HEAD..{tag}")
-    return {"ok": True, "latest": tag, "pending": pending.splitlines()}
+    _, pending = run("git", "log", "--format=%h", f"HEAD..{tag}")
+    _, current = run("git", "describe", "--tags", "--abbrev=0")
+    available = bool(pending)
+    return {"ok": True, "current": current, "latest": tag, "available": available,
+            "releases": release_notes(current) if available else []}
+
+
+def _version(tag: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(r"\d+", tag))
+
+
+def release_notes(current: str) -> list[dict]:
+    """GitHub releases newer than `current`, newest first. Empty if GitHub can't be reached."""
+    _, origin = run("git", "remote", "get-url", "origin")
+    repo = re.search(r"github\.com[:/](.+?)(?:\.git)?$", origin)
+    if not repo:
+        return []
+    try:
+        res = requests.get(f"https://api.github.com/repos/{repo[1]}/releases", params={"per_page": 20}, timeout=10)
+        res.raise_for_status()
+        releases = res.json()
+    except (requests.RequestException, ValueError):
+        return []
+    return [
+        {"tag": r["tag_name"], "name": r["name"] or r["tag_name"], "notes": r["body"] or "", "date": r["published_at"]}
+        for r in releases
+        if not r["draft"] and _version(r["tag_name"]) > _version(current)
+    ]
 
 
 def update() -> dict:
     check = check_updates()
-    if not check["ok"] or not check["pending"]:
+    if not check["ok"] or not check["available"]:
         return {"ok": False, "output": check.get("output", "Already on the latest release.")}
     steps = [
         ("git", "checkout", "--quiet", check["latest"]),

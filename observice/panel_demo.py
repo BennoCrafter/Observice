@@ -28,10 +28,12 @@ CLIP_SIZE = (640, 360)
 CLIP_FPS = 15
 
 logger = logging.getLogger("observice")
+visit_started: float | None = None  # set while the simulated change is happening; the live feed shows the visitor
+VISIT_SECONDS = 12
 
 
-def scene(t: float, size=SIZE, visitor: bool = True) -> np.ndarray:
-    """A fake hallway: wall, floor, door, a lamp that flickers and a visitor walking past."""
+def scene(t: float, size=SIZE, visitor: float | None = None) -> np.ndarray:
+    """A fake hallway: wall, floor, door, a lamp that flickers; visitor = 0..1 walks someone across."""
     w, h = size
     img = np.empty((h, w, 3), np.uint8)
     img[:] = (196, 205, 214)
@@ -41,8 +43,8 @@ def scene(t: float, size=SIZE, visitor: bool = True) -> np.ndarray:
     cv2.circle(img, (door[0] + int(w * 0.02), int(h * 0.45)), max(3, w // 200), (40, 190, 220), -1)
     glow = 150 + int(30 * math.sin(t * 2))
     cv2.circle(img, (int(w * 0.2), int(h * 0.18)), w // 22, (glow, glow + 40, 255), -1)
-    if visitor:
-        x = int((t * 0.12 % 1.4 - 0.2) * w)
+    if visitor is not None:
+        x = int((visitor * 1.2 - 0.1) * w)
         cv2.ellipse(img, (x, int(h * 0.52)), (w // 32, h // 6), 0, 0, 360, (70, 60, 52), -1)
         cv2.circle(img, (x, int(h * 0.3)), w // 45, (150, 170, 205), -1)
     cv2.putText(img, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), (int(w * 0.02), int(h * 0.95)),
@@ -59,8 +61,9 @@ def _render_clip(path: Path, seconds: float) -> bool:
          "-r", str(CLIP_FPS), "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(path)],
         stdin=subprocess.PIPE,
     )
-    for i in range(int(seconds * CLIP_FPS)):
-        proc.stdin.write(scene(3 + i / CLIP_FPS, CLIP_SIZE).tobytes())
+    frames = int(seconds * CLIP_FPS)
+    for i in range(frames):
+        proc.stdin.write(scene(i / CLIP_FPS, CLIP_SIZE, visitor=i / frames).tobytes())
     proc.stdin.close()
     return proc.wait() == 0
 
@@ -74,7 +77,7 @@ def _seed_events(directory: Path) -> None:
                                         (410, 9, 1.4), (900, 27, 7.7), (1500, 16, 3.3), (2900, 60, 24.0)]:
         start = now - timedelta(minutes=minutes_ago)
         event_id = new_event_id(directory, start)
-        cv2.imwrite(str(directory / f"{event_id}.jpg"), scene(5 + minutes_ago, CLIP_SIZE))
+        cv2.imwrite(str(directory / f"{event_id}.jpg"), scene(minutes_ago, CLIP_SIZE, visitor=0.5))
         has_clip = _render_clip(directory / f"{event_id}.mp4", min(duration, 8))
         write_event(directory, {"id": event_id, "start": start.isoformat(timespec="seconds"),
                                 "end": (start + timedelta(seconds=duration)).isoformat(timespec="seconds"),
@@ -82,17 +85,20 @@ def _seed_events(directory: Path) -> None:
 
 
 def _simulate(directory: Path) -> None:
-    """Every ~40 s: a change starts (shows as live), lasts 12 s, then gets its clip."""
+    """Every ~40 s someone walks through: a change starts (in progress), lasts 12 s, then gets its clip."""
+    global visit_started
     sample_clip = next(directory.glob("*.mp4"), None)
     while True:
         time.sleep(25)
+        visit_started = time.time()
         start = datetime.now()
         event = {"id": new_event_id(directory, start), "start": start.isoformat(timespec="seconds"), "end": None,
                  "duration": None, "peak_percent": 4.6, "has_clip": False}
-        cv2.imwrite(str(directory / f"{event['id']}.jpg"), scene(time.time(), CLIP_SIZE))
+        cv2.imwrite(str(directory / f"{event['id']}.jpg"), scene(time.time(), CLIP_SIZE, visitor=0.5))
         write_event(directory, event)
         logger.info("Change detected (%.1f%% of the picture)", 4.6)
-        time.sleep(12)
+        time.sleep(VISIT_SECONDS)
+        visit_started = None
         if sample_clip:
             shutil.copy(sample_clip, directory / f"{event['id']}.mp4")
         event.update(end=datetime.now().isoformat(timespec="seconds"), duration=12, has_clip=bool(sample_clip))
@@ -133,7 +139,9 @@ def _stream(handler) -> None:
     config = handler.server_config()
     try:
         while True:
-            frame = cv2.imencode(".jpg", scene(time.time()), [cv2.IMWRITE_JPEG_QUALITY, config.panel.preview_quality])[1]
+            now = time.time()
+            visitor = (now - visit_started) / VISIT_SECONDS if visit_started else None
+            frame = cv2.imencode(".jpg", scene(now, visitor=visitor), [cv2.IMWRITE_JPEG_QUALITY, config.panel.preview_quality])[1]
             handler._write_frame(frame.tobytes())
             time.sleep(1 / config.panel.preview_fps)
     except (BrokenPipeError, ConnectionResetError):
@@ -161,7 +169,12 @@ def install(panel) -> None:
     panel.status = lambda: {"state": "active", "since": started, "restarts": "0", "commit": "v0.2.0 (demo)",
                             "host": "observice", "wifi": {"ssid": "Home", "signal": 72, "dbm": -54.0, "device": "wlan0"}}
     panel.restart_camera = lambda: (True, "Demo: camera service not restarted.")
-    panel.check_updates = lambda: {"ok": True, "latest": "v0.2.1", "pending": ["3bbea38 Faster live preview"]}
+    panel.check_updates = lambda: {"ok": True, "current": "v0.2.0", "latest": "v0.2.1", "available": True, "releases": [
+        {"tag": "v0.2.1", "name": "v0.2.1", "date": datetime.now().isoformat(),
+         "notes": "- Panel: one update button that shows these notes first\n- Clearer live feed: separate badge while a change is happening"},
+        {"tag": "v0.2.0", "name": "v0.2.0", "date": (datetime.now() - timedelta(days=2)).isoformat(),
+         "notes": "## What's new\n- Continuous change detection with **video clips**\n- Redesigned panel\n\n**Full Changelog**: https://github.com/BennoCrafter/Observice/compare/v0.1.3...v0.2.0"},
+    ]}
     panel.update = lambda: {"ok": False, "output": "Demo: updates are disabled."}
     panel.Handler.server_config = lambda self: panel.load_config(panel.CONFIG_PATH)
     panel.Handler._stream = _stream

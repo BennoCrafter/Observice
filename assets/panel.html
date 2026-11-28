@@ -60,7 +60,8 @@
           letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgb(0 0 0 / .55); backdrop-filter: blur(6px); }
   .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa1ad; }
   .chip.live .dot { background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
-  .chip.motion { background: rgb(229 56 59 / .9); }
+  .chip.change { background: rgb(217 119 6 / .92); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .feed-wrap.changing::after { content: ""; position: absolute; inset: 0; border: 3px solid rgb(217 119 6); border-radius: var(--radius); pointer-events: none; }
   @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgb(229 56 59 / .6); } 50% { opacity: .55; box-shadow: 0 0 0 5px rgb(229 56 59 / 0); } }
   @media (prefers-reduced-motion: reduce) { .chip.live .dot { animation: none; } }
 
@@ -78,7 +79,7 @@
   .thumb .play span { width: 26px; height: 26px; border-radius: 50%; background: rgb(0 0 0 / .5); display: grid; place-items: center; }
   .event .when { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
   .event .what { color: var(--muted); font-size: 12.5px; }
-  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 99px; background: var(--live); color: #fff; }
+  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 99px; background: rgb(217 119 6); color: #fff; }
   .empty { color: var(--muted); padding: 28px 16px; text-align: center; font-size: 13.5px; }
   .more { margin: 4px 14px 14px; }
 
@@ -124,7 +125,15 @@
   .bars i { width: 3px; background: var(--line-strong); border-radius: 1px; } .bars i.on { background: var(--ok); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
   h3.minor { margin: 0 0 10px; font-size: 13px; font-weight: 620; }
-  ul.pending { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .release { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--sunken); }
+  .release-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .release-head strong { font-size: 14px; } .release-head span { color: var(--muted); font-size: 12.5px; }
+  .notes { font-size: 13px; color: var(--text); max-height: 260px; overflow-y: auto; margin-bottom: 12px; }
+  .notes .rel + .rel { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .notes .rel-title { font-weight: 620; } .notes .rel-date { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .notes ul { margin: 6px 0 0; padding-left: 18px; } .notes p { margin: 6px 0 0; }
+  .notes a { color: var(--accent); }
+  details.update-details { margin-top: 10px; font-size: 13px; color: var(--muted); }
   pre.out { background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin: 10px 0 0;
             font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; max-height: 240px; overflow: auto; }
   pre.out:empty { display: none; }
@@ -165,7 +174,7 @@
     <div class="feed-wrap" id="feed-wrap">
       <img class="feed" src="/stream.mjpg" alt="Live camera feed">
       <div class="overlay tl"><span class="chip" id="live-chip"><span class="dot"></span><span id="live-text">Connecting</span></span></div>
-      <div class="overlay tr"><span class="chip motion" id="motion-chip" hidden>Change detected</span></div>
+      <div class="overlay tr"><span class="chip change" id="change-chip" hidden>Change in progress · <span id="change-time">0:00</span></span></div>
     </div>
   </section>
 
@@ -205,13 +214,17 @@
       <p class="msg" id="restart-msg" role="status"></p>
       <hr>
       <h3 class="minor">Updates</h3>
-      <div class="row">
-        <button id="check">Check for updates</button>
-        <button id="update" class="primary">Update &amp; restart</button>
-      </div>
+      <button id="check">Check for updates</button>
       <p class="msg" id="update-msg" role="status"></p>
-      <ul class="pending" id="pending"></ul>
-      <pre class="out" id="update-out"></pre>
+      <div class="release" id="release" hidden>
+        <div class="release-head"><strong id="release-title"></strong><span id="release-sub"></span></div>
+        <div class="notes" id="release-notes"></div>
+        <div class="row">
+          <button class="primary" id="update">Update now</button>
+          <button class="ghost" id="later">Not now</button>
+        </div>
+      </div>
+      <details class="update-details" id="update-details" hidden><summary>Details</summary><pre class="out" id="update-out"></pre></details>
     </div>
   </section>
 
@@ -304,7 +317,16 @@ async function refreshStatus() {
 }
 
 /* ---------- changes ---------- */
-let events = [];
+let events = [], ongoing = null;
+// "Live" means the camera is streaming; a change is separate: amber frame + timer only while one is happening.
+function showChange() {
+  $("change-chip").hidden = !ongoing;
+  $("feed-wrap").classList.toggle("changing", !!ongoing);
+  if (!ongoing) return;
+  const s = Math.max(0, Math.round((Date.now() - new Date(ongoing.start)) / 1000));
+  $("change-time").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+setInterval(showChange, 1000);
 async function refreshEvents() {
   const { events: page = [] } = await api("/api/events");
   const oldest = page.at(-1)?.id;
@@ -320,8 +342,8 @@ $("more").onclick = e => busy(e.target, async () => {
   renderEvents();
 });
 function renderEvents() {
-  const ongoing = events.find(e => e.end === null);
-  $("motion-chip").hidden = !ongoing;
+  ongoing = events.find(e => e.end === null) ?? null;
+  showChange();
   const today = events.filter(e => sameDay(new Date(e.start), new Date())).length;
   $("changes-sub").textContent = today ? `${today} today` : "";
   const list = $("events");
@@ -335,7 +357,7 @@ function renderEvents() {
         el("img", { src: `/recordings/${e.id}.jpg?${e.peak_percent}`, alt: "", loading: "lazy", onerror() { this.remove(); } }),
         e.has_clip ? el("div", { className: "play", innerHTML: '<span><svg width="10" height="12" viewBox="0 0 10 12"><path d="M0 0l10 6-10 6z" fill="#fff"/></svg></span>' }) : null),
       el("div", {},
-        el("div", { className: "when" }, el("span", { textContent: when(e.start) }), e.end === null ? el("span", { className: "tag", textContent: "LIVE" }) : null),
+        el("div", { className: "when" }, el("span", { textContent: when(e.start) }), e.end === null ? el("span", { className: "tag", textContent: "NOW" }) : null),
         el("div", { className: "what", textContent: [e.end === null ? "In progress" : duration(e.duration), `${e.peak_percent}% of the picture changed`].join(" · ") }))))));
 }
 
@@ -412,19 +434,47 @@ $("restart").onclick = e => busy(e.target, async () => {
   say("restart-msg", r.ok, r.ok ? "Camera service restarted." : r.output);
   refreshStatus();
 });
+/* Release notes are short markdown ("- item", "## heading", **bold**, links): render just that, escaped. */
+function renderNotes(md) {
+  const inline = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|\s)(https?:\/\/\S+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  let html = "", list = false;
+  for (const line of md.split(/\r?\n/)) {
+    const item = line.match(/^\s*[-*] (.*)/);
+    if (item && !list) { html += "<ul>"; list = true; }
+    if (!item && list) { html += "</ul>"; list = false; }
+    if (item) html += `<li>${inline(item[1])}</li>`;
+    else if (line.trim()) html += `<p>${line.startsWith("#") ? `<strong>${inline(line.replace(/^#+\s*/, ""))}</strong>` : inline(line)}</p>`;
+  }
+  return html + (list ? "</ul>" : "");
+}
 $("check").onclick = e => busy(e.target, async () => {
+  $("release").hidden = true;
+  say("update-msg", true, "Checking…");
   const r = await api("/api/updates");
-  $("pending").replaceChildren(...(r.pending || []).map(c => el("li", { textContent: c })));
-  if (!r.ok) say("update-msg", false, r.output);
-  else say("update-msg", true, r.pending.length ? `${r.latest} available (${r.pending.length} new commit${r.pending.length > 1 ? "s" : ""}).` : "Up to date.");
+  if (!r.ok) return say("update-msg", false, r.output);
+  if (!r.available) return say("update-msg", true, `You're on the latest release (${r.current || r.latest}).`);
+  $("update-msg").textContent = "";
+  $("release-title").textContent = `${r.latest} is available`;
+  $("release-sub").textContent = r.current ? `you have ${r.current}` : "";
+  $("release-notes").innerHTML = r.releases.length
+    ? r.releases.map(rel => `<div class="rel"><span class="rel-title">${rel.name.replace(/</g, "&lt;")}</span><span class="rel-date">${new Date(rel.date).toLocaleDateString()}</span>${renderNotes(rel.notes) || "<p>No release notes.</p>"}</div>`).join("")
+    : "<p>Release notes couldn't be loaded from GitHub.</p>";
+  $("update").textContent = `Update to ${r.latest}`;
+  $("release").hidden = false;
 });
+$("later").onclick = () => { $("release").hidden = true; };
 $("update").onclick = e => busy(e.target, async () => {
-  if (!confirm("Update to the latest release and restart Observice?")) return;
-  say("update-msg", true, "Updating… this can take a minute.");
+  $("later").disabled = true;
+  say("update-msg", true, "Updating… this can take a minute. The camera restarts at the end.");
   const r = await api("/api/update", {});
   $("update-out").textContent = r.output;
-  say("update-msg", r.ok, r.ok ? "Updated. The panel restarts itself, reloading shortly." : "Update failed, see output.");
-  if (r.ok) setTimeout(() => location.reload(), 4000);
+  $("update-details").hidden = !r.output;
+  say("update-msg", r.ok, r.ok ? "Updated. The panel restarts itself, reloading shortly." : "Update failed, see details.");
+  if (r.ok) { $("release").hidden = true; setTimeout(() => location.reload(), 4000); }
+  $("later").disabled = false;
 });
 
 /* ---------- settings (rendered from the schema in observice/config.py) ---------- */

@@ -60,11 +60,11 @@ def test_check_updates_follows_release_tags():
         os.chdir(clone)
         try:
             r = check_updates()
-            assert r["ok"] and r["latest"] == "v0.10.0" and len(r["pending"]) == 1, r
+            assert r["ok"] and r["latest"] == "v0.10.0" and r["current"] == "v0.9.0" and r["available"], r
             git("commit", "-q", "--allow-empty", "-m", "three", cwd=origin)  # main ahead of newest tag
             git("pull", "-q", "origin", "HEAD", cwd=clone)
             r = check_updates()
-            assert r["ok"] and r["pending"] == [], r  # never offers a downgrade
+            assert r["ok"] and not r["available"], r  # never offers a downgrade
         finally:
             os.chdir(cwd)
 
