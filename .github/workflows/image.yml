@@ -57,7 +57,7 @@ jobs:
         run: |
           NAME="observice-$TAG-arm64.img"
           sudo mv observice/image/src/workspace/*.img "$NAME"
-          sudo chown "$USER" "$NAME"
+          sudo chown "$USER:" "$NAME"  # owner and group, or xz fails copying the group
           EXTRACT_SIZE=$(stat -c %s "$NAME")
           EXTRACT_SHA=$(sha256sum "$NAME" | cut -d' ' -f1)
           xz -T0 -6 "$NAME"
