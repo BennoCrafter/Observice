@@ -78,7 +78,7 @@
   .thumb .play span { width: 26px; height: 26px; border-radius: 50%; background: rgb(0 0 0 / .5); display: grid; place-items: center; }
   .event .when { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
   .event .what { color: var(--muted); font-size: 12.5px; }
-  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 1px 7px; border-radius: 99px; background: var(--live); color: #fff; }
+  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 99px; background: var(--live); color: #fff; }
   .empty { color: var(--muted); padding: 28px 16px; text-align: center; font-size: 13.5px; }
   .more { margin: 4px 14px 14px; }
 
@@ -104,7 +104,7 @@
   .log { display: grid; grid-template-columns: 70px 64px 1fr; gap: 10px; padding: 4px 16px; border-bottom: 1px solid var(--line); align-items: baseline; }
   .log:last-child { border-bottom: 0; }
   .log time { color: var(--faint); }
-  .log .lvl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-align: center; border-radius: 5px; padding: 0 4px; color: var(--muted); background: var(--sunken); }
+  .log .lvl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-align: center; border-radius: 5px; padding: 1px 6px; color: var(--muted); background: var(--sunken); }
   .log.WARNING { background: var(--warn-soft); } .log.WARNING .lvl { color: var(--warn); background: transparent; }
   .log.ERROR, .log.CRITICAL { background: var(--bad-soft); } .log.ERROR .lvl, .log.CRITICAL .lvl { color: var(--bad); background: transparent; }
   .log .text { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -123,7 +123,7 @@
   .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; margin-left: 6px; vertical-align: -1px; }
   .bars i { width: 3px; background: var(--line-strong); border-radius: 1px; } .bars i.on { background: var(--ok); }
   hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
-  h4 { margin: 0 0 10px; font-size: 13px; font-weight: 620; }
+  h3.minor { margin: 0 0 10px; font-size: 13px; font-weight: 620; }
   ul.pending { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
   pre.out { background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin: 10px 0 0;
             font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; max-height: 240px; overflow: auto; }
@@ -204,7 +204,7 @@
       <button id="restart">Restart camera service</button>
       <p class="msg" id="restart-msg" role="status"></p>
       <hr>
-      <h4>Updates</h4>
+      <h3 class="minor">Updates</h3>
       <div class="row">
         <button id="check">Check for updates</button>
         <button id="update" class="primary">Update &amp; restart</button>
