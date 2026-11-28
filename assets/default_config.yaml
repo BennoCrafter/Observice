@@ -1,29 +1,36 @@
+# Defaults for a new install. Every field is described in observice/config.py and editable in the panel.
 camera:
   width: 1280
   height: 720
   framerate: 30
   rtsp_port: 8554
-  device: "" # Linux only: v4l2 device path, e.g. /dev/video2. Empty = /dev/video0.
-
+  device: ''
+  rotation: 0
+  mirror: false
 motion:
   enabled: true
-  check_interval: 60 # seconds between frame comparisons
-  threshold: 25 # mean pixel-diff above this counts as "changed"
-
+  min_area_percent: 1.0
+  quiet_seconds: 10
+  ignore_border_percent: 0.0
+recording:
+  enabled: true
+  pre_roll_seconds: 5
+  max_clip_seconds: 60
+  keep_days: 7
 discord:
   enabled: false
-  webhook_url: ""
-  token: "" # only needed for scripts/download_discord_images.py
-  listening_users: [] # Discord user ids to @-mention when an image is sent (int)
-
+  webhook_url: ''
+  token: ''
+  listening_users: []
 mqtt:
   enabled: true
   host: homeassistant.local
   port: 1883
-  username: ""
-  password: ""
+  username: ''
+  password: ''
   base_topic: observice/camera
-
 panel:
-  port: 80 # web dashboard: http://<pi-ip> (http://observice.local on the image)
-  password: "" # basic-auth password (any username); empty = no login
+  port: 80
+  password: ''
+  preview_fps: 5
+  preview_quality: 70

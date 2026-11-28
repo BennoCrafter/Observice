@@ -3,7 +3,7 @@ import os
 import subprocess
 import tempfile
 
-from observice.panel import authorized, check_updates, parse_config
+from observice.panel import authorized, check_updates, parse_config, parse_log
 
 
 def _basic(password: str) -> str:
@@ -11,8 +11,8 @@ def _basic(password: str) -> str:
 
 
 def test_parse_config_accepts_valid_and_rejects_bad_types():
-    config = parse_config({"motion": {"threshold": 30, "enabled": False}, "discord": {"listening_users": [1, 2]}})
-    assert config.motion.threshold == 30 and config.motion.enabled is False
+    config = parse_config({"motion": {"min_area_percent": 2, "enabled": False}, "discord": {"listening_users": [1, 2]}})
+    assert config.motion.min_area_percent == 2 and config.motion.enabled is False
     assert config.camera.width == 1280  # missing fields keep defaults
 
     for bad in (
@@ -21,6 +21,9 @@ def test_parse_config_accepts_valid_and_rejects_bad_types():
         {"camera": {"rtsp_port": 1.5}},
         {"discord": {"listening_users": ["x"]}},
         {"camera": {"nope": 1}},
+        {"camera": {"rotation": 45}},  # not one of the options
+        {"motion": {"quiet_seconds": 0}},  # below min
+        {"panel": {"preview_quality": 101}},  # above max
         {"nope": {}},
         [],
     ):
@@ -66,8 +69,22 @@ def test_check_updates_follows_release_tags():
             os.chdir(cwd)
 
 
+def test_parse_log_groups_tracebacks():
+    entries = parse_log(
+        "2026-11-28 16:14:52,382 - observice - INFO - RTSP stream ready\n"
+        "2026-11-28 16:15:00,001 - observice - ERROR - Could not write clip\n"
+        "Traceback (most recent call last):\n"
+        '  File "x.py", line 1\n'
+        "ValueError: boom\n"
+    )
+    assert [e["level"] for e in entries] == ["INFO", "ERROR"]
+    assert entries[0] == {"time": "2026-11-28 16:14:52", "level": "INFO", "message": "RTSP stream ready"}
+    assert entries[1]["message"].endswith("ValueError: boom")
+
+
 if __name__ == "__main__":
     test_parse_config_accepts_valid_and_rejects_bad_types()
     test_authorized()
     test_check_updates_follows_release_tags()
+    test_parse_log_groups_tracebacks()
     print("ok")

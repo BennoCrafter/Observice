@@ -1,55 +1,51 @@
-import asyncio
-import logging
-from typing import Awaitable, Callable
-
 import cv2
 import numpy as np
 
-from observice.config import MotionConfig
-
-logger = logging.getLogger("observice")
-
-# Consecutive unreadable polls before giving up; the camera is stalled, and a
-# service restart (systemd Restart=on-failure) is what brings it back.
-MAX_FAILED_READS = 3
+# Per-pixel brightness difference (0-255) that counts a pixel as changed; filters sensor noise.
+PIXEL_DELTA = 25
 
 
-def frame_changed(prev: np.ndarray, curr: np.ndarray, threshold: float) -> bool:
+def changed_percent(prev: np.ndarray, curr: np.ndarray, ignore_border_percent: float = 0.0) -> float:
+    """Share (0-100) of pixels that differ noticeably between two grayscale frames."""
     if prev.shape != curr.shape:
-        return True
-    diff = cv2.absdiff(prev, curr)
-    return float(diff.mean()) > threshold
+        return 100.0
+    h, w = curr.shape[:2]
+    by, bx = int(h * ignore_border_percent / 100), int(w * ignore_border_percent / 100)
+    prev, curr = prev[by:h - by, bx:w - bx], curr[by:h - by, bx:w - bx]
+    if curr.size == 0:
+        return 0.0
+    # Blur first so single noisy pixels and compression artefacts don't count.
+    diff = cv2.absdiff(cv2.GaussianBlur(prev, (5, 5), 0), cv2.GaussianBlur(curr, (5, 5), 0))
+    return float(np.count_nonzero(diff > PIXEL_DELTA)) * 100 / diff.size
 
 
-async def run_motion_loop(
-    stream_url: str,
-    motion: MotionConfig,
-    on_change: Callable[[np.ndarray], Awaitable[None]],
-) -> None:
-    """Polls the RTSP stream on an interval and calls on_change() when the frame
-    differs from the previous one by more than motion.threshold.
+class EventTracker:
+    """Turns a stream of per-frame "changed?" answers into events.
 
-    # ponytail: reopens the RTSP capture every poll instead of holding it open.
-    # Simple and avoids stale-buffer issues at minute-scale intervals; if
-    # check_interval needs to drop below ~5s, switch to a persistent
-    # cv2.VideoCapture read in a background thread instead.
+    An event starts on the first changed frame and ends after quiet_seconds without
+    change, or when it reaches max_seconds (the next change then starts a new one).
     """
-    prev_frame = None
-    failed_reads = 0
-    while True:
-        if motion.enabled:
-            cap = cv2.VideoCapture(stream_url)
-            ok, frame = cap.read()
-            cap.release()
-            if ok:
-                failed_reads = 0
-                if prev_frame is not None and frame_changed(prev_frame, frame, motion.threshold):
-                    logger.info("Motion detected")
-                    await on_change(frame)
-                prev_frame = frame
-            else:
-                failed_reads += 1
-                logger.warning("Could not read frame from %s (%d/%d)", stream_url, failed_reads, MAX_FAILED_READS)
-                if failed_reads >= MAX_FAILED_READS:
-                    raise RuntimeError("Camera stream stalled, exiting so systemd restarts the service")
-        await asyncio.sleep(motion.check_interval)
+
+    def __init__(self, quiet_seconds: float, max_seconds: float):
+        self.quiet_seconds = quiet_seconds
+        self.max_seconds = max_seconds
+        self.started_at: float | None = None
+        self.last_change = 0.0
+
+    @property
+    def active(self) -> bool:
+        return self.started_at is not None
+
+    def update(self, now: float, changed: bool) -> str | None:
+        """Returns "start", "end" or None."""
+        if not self.active:
+            if changed:
+                self.started_at = self.last_change = now
+                return "start"
+            return None
+        if changed:
+            self.last_change = now
+        if now - self.last_change >= self.quiet_seconds or now - self.started_at >= self.max_seconds:
+            self.started_at = None
+            return "end"
+        return None

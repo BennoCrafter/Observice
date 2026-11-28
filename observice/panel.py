@@ -1,27 +1,35 @@
-"""Web dashboard: live preview, service status + logs, config editor, release update.
+"""Web dashboard: live preview, change events with clips, logs, config editor, release update.
 
 Runs as its own systemd unit (deploy/observice-panel.service) so it stays up while
 it restarts the camera service. Start locally with: python -m observice.panel
+Try it without a camera or GStreamer: python -m observice.panel --demo
 """
 import base64
 import hmac
 import json
 import re
+import socket
 import subprocess
 import sys
 import time
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
-
-from observice.config import Config, _from_dict, load_config, save_config
+from observice import recordings
+from observice.config import Config, _from_dict, load_config, save_config, schema
 from observice.logger import setup_logger
 
 CONFIG_PATH = Path("assets/config.yaml")
 PAGE_PATH = Path("assets/panel.html")
 NO_FEED_PATH = Path("assets/no-livefeed.jpeg")
-PREVIEW_FPS = 5  # browser preview only; HA still pulls full fps over RTSP
+LOG_PATH = Path("logs/observice_log")  # shared with the camera service (observice/logger.py)
+RECORDINGS_DIR = recordings.RECORDINGS_DIR
+LOG_TAIL_BYTES = 512 * 1024
+LOG_LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ - \S+ - (\w+) - (.*)$")
+MEDIA_PATH = re.compile(r"^/recordings/([\w-]+)\.(jpg|mp4)$")
+MEDIA_TYPES = {"jpg": "image/jpeg", "mp4": "video/mp4"}
 
 logger = setup_logger()
 
@@ -55,20 +63,49 @@ def _type_ok(value, default) -> bool:
 
 
 def parse_config(data) -> Config:
-    """Rejects unknown keys and wrong types, so a typo in the panel can't crash the camera service."""
-    defaults = asdict(Config())
+    """Rejects unknown keys, wrong types and out-of-range values, so the panel can't break the camera service."""
+    specs = {s["key"]: {f["key"]: f for f in s["fields"]} for s in schema()}
     if not isinstance(data, dict):
         raise ValueError("config must be an object")
     for section, values in data.items():
-        if section not in defaults or not isinstance(values, dict):
+        if section not in specs or not isinstance(values, dict):
             raise ValueError(f"unknown section: {section}")
         for key, value in values.items():
-            if key not in defaults[section]:
+            spec = specs[section].get(key)
+            if spec is None:
                 raise ValueError(f"unknown field: {section}.{key}")
-            if not _type_ok(value, defaults[section][key]):
-                expected = type(defaults[section][key]).__name__
-                raise ValueError(f"{section}.{key} must be {expected}, got {value!r}")
+            name = f"{section}.{key}"
+            if not _type_ok(value, spec["default"]):
+                raise ValueError(f"{name} must be {spec['type']}, got {value!r}")
+            if "options" in spec and value not in spec["options"]:
+                raise ValueError(f"{name} must be one of {spec['options']}")
+            if not spec.get("min", value) <= value <= spec.get("max", value):
+                raise ValueError(f"{name} must be between {spec['min']} and {spec['max']}")
     return _from_dict(Config, data)
+
+
+def parse_log(text: str) -> list[dict]:
+    """Log lines -> entries; lines that don't start a record (tracebacks) belong to the one before."""
+    entries = []
+    for line in text.splitlines():
+        m = LOG_LINE.match(line)
+        if m:
+            entries.append({"time": m[1], "level": m[2], "message": m[3]})
+        elif entries and line.strip():
+            entries[-1]["message"] += "\n" + line
+    return entries
+
+
+def read_log(path: Path, limit: int = 500) -> list[dict]:
+    try:
+        with path.open("rb") as fh:
+            fh.seek(max(0, path.stat().st_size - LOG_TAIL_BYTES))
+            text = fh.read().decode(errors="replace")
+    except OSError:
+        return []
+    if len(text.encode()) >= LOG_TAIL_BYTES:
+        text = text.partition("\n")[2]  # drop the line we started in the middle of
+    return parse_log(text)[-limit:]
 
 
 def authorized(header: str | None, password: str) -> bool:
@@ -110,15 +147,14 @@ def status() -> dict:
     _, state = run("systemctl", "is-active", "observice")
     _, show = run("systemctl", "show", "-p", "ActiveEnterTimestamp", "-p", "NRestarts", "observice")
     _, commit = run("git", "describe", "--tags", "--always")
-    _, logs = run("journalctl", "-u", "observice", "-n", "300", "--no-pager", "-o", "cat")
     props = dict(line.split("=", 1) for line in show.splitlines() if "=" in line)
     return {
         "state": state,
         "since": props.get("ActiveEnterTimestamp", ""),
         "restarts": props.get("NRestarts", ""),
         "commit": commit,
+        "host": socket.gethostname(),
         "wifi": wifi(),
-        "logs": logs,
     }
 
 
@@ -160,14 +196,13 @@ def update() -> dict:
     return {"ok": True, "output": "\n\n".join(output)}
 
 
-def preview_pipeline(Gst, url: str):
-    # decodebin picks the Pi's hardware H.264 decoder, and frames are dropped to PREVIEW_FPS before JPEG
+def preview_pipeline(Gst, url: str, fps: int, jpeg_clause: str):
+    # decodebin picks the Pi's hardware H.264 decoder, and frames are dropped to the preview fps before JPEG
     # encoding: decoding + encoding every 720p frame in software can't keep up on a Pi 3, so the preview
     # fell further and further behind. appsink keeps only the newest frame.
-    jpegenc = "v4l2jpegenc" if Gst.ElementFactory.find("v4l2jpegenc") else "jpegenc quality=70"
     return Gst.parse_launch(
         f"rtspsrc location={url} latency=0 protocols=tcp ! rtph264depay ! h264parse ! decodebin ! "
-        f"videorate drop-only=true max-rate={PREVIEW_FPS} ! videoconvert ! {jpegenc} ! "
+        f"videorate drop-only=true max-rate={fps} ! videoconvert ! {jpeg_clause} ! "
         "appsink name=sink max-buffers=1 drop=true sync=false"
     )
 
@@ -199,16 +234,26 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._check_auth():
             return
-        if self.path == "/":
+        url = urlsplit(self.path)
+        query = parse_qs(url.query)
+        media = MEDIA_PATH.match(url.path)
+        if url.path == "/":
             self._send(200, PAGE_PATH.read_bytes(), "text/html; charset=utf-8")
-        elif self.path == "/api/status":
+        elif url.path == "/api/status":
             self._json(status())
-        elif self.path == "/api/config":
-            self._json(asdict(load_config(CONFIG_PATH)))
-        elif self.path == "/api/updates":
+        elif url.path == "/api/config":
+            self._json({"values": asdict(load_config(CONFIG_PATH)), "schema": schema()})
+        elif url.path == "/api/logs":
+            self._json({"entries": read_log(LOG_PATH)})
+        elif url.path == "/api/events":
+            before = query.get("before", [None])[0]
+            self._json({"events": recordings.list_events(RECORDINGS_DIR, before)})
+        elif url.path == "/api/updates":
             self._json(check_updates())
-        elif self.path == "/stream.mjpg":
+        elif url.path == "/stream.mjpg":
             self._stream()
+        elif media and recordings.ID_PATTERN.match(media[1]):
+            self._send_file(RECORDINGS_DIR / f"{media[1]}.{media[2]}", MEDIA_TYPES[media[2]])
         else:
             self._send(404, b"not found", "text/plain")
 
@@ -226,13 +271,60 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": ok, "output": out})
         elif self.path == "/api/update":
             self._json(update())
+        elif self.path == "/api/events/delete":
+            event_id = self._body().get("id", "")
+            ok = recordings.delete_event(RECORDINGS_DIR, event_id)
+            if ok:
+                logger.info("Deleted change %s via panel", event_id)
+            self._json({"ok": ok})
         else:
             self._send(404, b"not found", "text/plain")
 
+    def _body(self):
+        return json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+
+    def _send_file(self, path: Path, content_type: str) -> None:
+        """Serves byte ranges too: browsers need them to seek in (Safari: to play) a video."""
+        try:
+            size = path.stat().st_size
+        except OSError:
+            self._send(404, b"not found", "text/plain")
+            return
+        start, end = 0, size - 1
+        m = re.fullmatch(r"bytes=(\d*)-(\d*)", self.headers.get("Range", ""))
+        if m and (m[1] or m[2]):
+            start, end = (int(m[1]), int(m[2] or end)) if m[1] else (max(0, size - int(m[2])), end)
+            end = min(end, size - 1)
+            if start > end:
+                self.send_response(416)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(206)
+            self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        else:
+            self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(end - start + 1))
+        self.send_header("Accept-Ranges", "bytes")
+        self.end_headers()
+        try:
+            with path.open("rb") as fh:
+                fh.seek(start)
+                remaining = end - start + 1
+                while remaining > 0:
+                    chunk = fh.read(min(remaining, 256 * 1024))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # player seeked elsewhere
+
     def _save_config(self) -> None:
         try:
-            body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-            new = parse_config(json.loads(body))
+            new = parse_config(self._body())
         except ValueError as e:  # includes JSONDecodeError
             self._json({"ok": False, "output": str(e)}, 400)
             return
@@ -245,18 +337,19 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"ok": ok, "output": out or "Saved, camera service restarted."})
 
     def _stream(self) -> None:
-        url = f"rtsp://127.0.0.1:{load_config(CONFIG_PATH).camera.rtsp_port}/cam"
+        config = load_config(CONFIG_PATH)
+        url = f"rtsp://127.0.0.1:{config.camera.rtsp_port}/cam"
         self.send_response(200)
         self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        from observice.capture import Gst  # lazy: keeps the rest of the panel importable without GStreamer
+        from observice.capture import Gst, _jpeg_clause  # lazy: keeps the rest of the panel importable without GStreamer
 
         pipeline = None
         try:
             while True:
                 if pipeline is None:
-                    pipeline = preview_pipeline(Gst, url)
+                    pipeline = preview_pipeline(Gst, url, config.panel.preview_fps, _jpeg_clause(config.panel.preview_quality))
                     pipeline.set_state(Gst.State.PLAYING)
                 sample = pipeline.get_by_name("sink").emit("try-pull-sample", 5 * Gst.SECOND)
                 if sample is None:  # camera service down or restarting
@@ -279,6 +372,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    if "--demo" in sys.argv[1:]:
+        from observice import panel_demo
+
+        panel_demo.install(sys.modules[__name__])
     port = load_config(CONFIG_PATH).panel.port
     server = ThreadingHTTPServer(("", port), Handler)
     server.daemon_threads = True

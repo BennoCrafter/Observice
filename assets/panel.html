@@ -6,225 +6,503 @@
 <title>Observice</title>
 <style>
   :root {
-    --bg: #f4f4f2; --card: #ffffff; --text: #1c1c1a; --muted: #6b6b66; --line: #e2e2dd;
-    --accent: #2f6fde; --on-accent: #ffffff; --ok: #1f9d55; --bad: #d64545; --warn: #c98a12; --code: #f7f7f4;
+    --bg: #f5f6f8; --card: #ffffff; --sunken: #f8f9fb; --text: #15171c; --muted: #6a7180; --faint: #9aa1ad;
+    --line: #e5e7eb; --line-strong: #d4d8de; --accent: #2563eb; --accent-soft: #e8efff; --on-accent: #fff;
+    --live: #e5383b; --ok: #15935a; --ok-soft: #e4f5ec; --warn: #b86e00; --warn-soft: #fff3dc;
+    --bad: #d12f2f; --bad-soft: #fde9e9; --shadow: 0 1px 2px rgb(16 24 40 / .05), 0 1px 3px rgb(16 24 40 / .06);
+    --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #121211; --card: #1c1c1b; --text: #ececea; --muted: #9a9a94; --line: #2e2e2c;
-            --accent: #6b9bf2; --on-accent: #0d1626; --ok: #3ccf7d; --bad: #f06a6a; --warn: #e8b34a; --code: #151514; }
+    :root { --bg: #101215; --card: #181b20; --sunken: #13161a; --text: #eceef2; --muted: #9aa1ad; --faint: #6a7180;
+            --line: #262a31; --line-strong: #343944; --accent: #6b9bff; --accent-soft: #1b2540; --on-accent: #0b1220;
+            --live: #ff5a5f; --ok: #3ccf8e; --ok-soft: #12291f; --warn: #f0b24a; --warn-soft: #2e2412;
+            --bad: #ff6b6b; --bad-soft: #321718; --shadow: none; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
-  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 10px;
-          border-radius: 99px; background: var(--card); border: 1px solid var(--line); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-  .dot.active { background: var(--ok); } .dot.failed, .dot.inactive { background: var(--bad); }
-  .dot.activating { background: var(--warn); }
-  main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 16px;
-         padding: 16px 24px 32px; max-width: 1400px; margin: 0 auto; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 14px 16px; } }
-  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; align-self: start; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
-  .feed { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #000; border-radius: 8px; display: block; }
-  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 0 14px; font-size: 14px; }
-  dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
-  button { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 8px; cursor: pointer;
-           border: 1px solid var(--line); background: var(--card); color: var(--text); }
+         font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header { display: flex; align-items: center; gap: 10px; max-width: 1440px; margin: 0 auto; padding: 20px 24px 4px; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); display: grid; place-items: center; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+  header .meta { color: var(--muted); font-size: 13px; }
+
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; max-width: 1440px; margin: 0 auto; padding: 16px 24px 40px; }
+  .wide { grid-column: 1 / -1; }
+  @media (max-width: 1000px) { main { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 32px; } header { padding: 16px 16px 0; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .card-head h2 { margin: 0; font-size: 15px; font-weight: 620; }
+  .card-head .sub { color: var(--muted); font-size: 13px; }
+  .card-head .spacer { flex: 1; }
+  .card-body { padding: 16px; }
+
+  button { cursor: pointer; border: 1px solid var(--line-strong); background: var(--card); border-radius: 9px; padding: 7px 13px; font-size: 13.5px; font-weight: 500; }
+  button:hover:not(:disabled) { background: var(--sunken); }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  button:disabled { opacity: .55; cursor: progress; }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
-  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 12px 0 0;
-        font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
-        max-height: 420px; overflow-y: auto; }
-  pre:empty { display: none; }
-  pre.logpane { margin: 0; height: min(72vh, 760px); max-height: none; font-size: 12.5px; }
-  .stack { display: grid; gap: 16px; align-content: start; }
-  details { border-bottom: 1px solid var(--line); }
-  details:last-child { border-bottom: 0; margin-bottom: 10px; }
-  summary { cursor: pointer; padding: 8px 2px; font-size: 14px; font-weight: 600; text-transform: capitalize; }
-  details[open] { padding-bottom: 8px; }
-  label { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; margin-top: 5px; font-size: 13px; }
-  label span { color: var(--muted); overflow-wrap: anywhere; }
-  input[type=text], input[type=number], input[type=password] { font: inherit; font-size: 13px; width: 100%;
-         padding: 4px 7px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
-  input[type=checkbox] { width: 18px; height: 18px; justify-self: start; accent-color: var(--accent); }
-  .msg { font-size: 14px; margin-top: 10px; } .msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
-  meter:not([hidden]) { display: block; width: 100%; max-width: 180px; height: 8px; margin-top: 4px; }
-  ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+  button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.07); }
+  button.danger { color: var(--bad); }
+  button.ghost { border-color: transparent; background: transparent; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .msg { margin: 10px 0 0; font-size: 13px; } .msg:empty { display: none; }
+  .msg.ok { color: var(--ok); } .msg.bad { color: var(--bad); }
+
+  /* Live feed */
+  .feed-wrap { position: relative; background: #0d0f12; border-radius: var(--radius); overflow: hidden; aspect-ratio: 16 / 9; }
+  .feed { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .overlay { position: absolute; display: flex; gap: 8px; }
+  .overlay.tl { top: 14px; left: 14px; } .overlay.tr { top: 14px; right: 14px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 650;
+          letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgb(0 0 0 / .55); backdrop-filter: blur(6px); }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa1ad; }
+  .chip.live .dot { background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
+  .chip.motion { background: rgb(229 56 59 / .9); }
+  @keyframes pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgb(229 56 59 / .6); } 50% { opacity: .55; box-shadow: 0 0 0 5px rgb(229 56 59 / 0); } }
+  @media (prefers-reduced-motion: reduce) { .chip.live .dot { animation: none; } }
+
+  /* Changes */
+  .changes { display: flex; flex-direction: column; min-height: 0; }
+  .changes { max-height: 480px; }
+  @media (min-width: 1001px) { .changes { max-height: var(--feed-h, 480px); } }
+  .event-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; flex: 1; }
+  .event { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; width: 100%; text-align: left;
+           border: 0; border-radius: 10px; padding: 8px; background: transparent; }
+  .event:hover { background: var(--sunken); }
+  .thumb { position: relative; width: 112px; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: var(--line); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .play { position: absolute; inset: 0; display: grid; place-items: center; opacity: .9; }
+  .thumb .play span { width: 26px; height: 26px; border-radius: 50%; background: rgb(0 0 0 / .5); display: grid; place-items: center; }
+  .event .when { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
+  .event .what { color: var(--muted); font-size: 12.5px; }
+  .tag { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 1px 7px; border-radius: 99px; background: var(--live); color: #fff; }
+  .empty { color: var(--muted); padding: 28px 16px; text-align: center; font-size: 13.5px; }
+  .more { margin: 4px 14px 14px; }
+
+  dialog { border: 0; border-radius: 16px; padding: 0; width: min(920px, calc(100vw - 32px)); background: var(--card); color: var(--text);
+           box-shadow: 0 24px 60px rgb(0 0 0 / .3); }
+  dialog::backdrop { background: rgb(15 18 24 / .55); }
+  dialog video, dialog .still { width: 100%; aspect-ratio: 16 / 9; background: #000; display: block; object-fit: contain; }
+  .dialog-head, .dialog-foot { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
+  .dialog-head h3 { margin: 0; font-size: 15px; } .dialog-head .spacer, .dialog-foot .spacer { flex: 1; }
+  .dialog-foot { color: var(--muted); font-size: 13px; }
+  a.button { text-decoration: none; border: 1px solid var(--line-strong); border-radius: 9px; padding: 7px 13px; font-size: 13.5px; font-weight: 500; color: var(--text); }
+
+  /* Logs */
+  .seg { display: inline-flex; background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .seg button { border: 0; background: transparent; padding: 4px 11px; border-radius: 7px; font-size: 12.5px; color: var(--muted); }
+  .seg button[aria-pressed=true] { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+  .search { border: 1px solid var(--line-strong); border-radius: 9px; padding: 5px 10px; background: var(--card); width: 200px; font-size: 13px; }
+  .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+  .switch input { appearance: none; width: 32px; height: 18px; border-radius: 99px; background: var(--line-strong); position: relative; margin: 0; cursor: pointer; transition: background .15s; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+  .switch input:checked { background: var(--accent); } .switch input:checked::after { transform: translateX(14px); }
+  .logs { height: 420px; overflow-y: auto; font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .log { display: grid; grid-template-columns: 70px 64px 1fr; gap: 10px; padding: 4px 16px; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .log:last-child { border-bottom: 0; }
+  .log time { color: var(--faint); }
+  .log .lvl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-align: center; border-radius: 5px; padding: 0 4px; color: var(--muted); background: var(--sunken); }
+  .log.WARNING { background: var(--warn-soft); } .log.WARNING .lvl { color: var(--warn); background: transparent; }
+  .log.ERROR, .log.CRITICAL { background: var(--bad-soft); } .log.ERROR .lvl, .log.CRITICAL .lvl { color: var(--bad); background: transparent; }
+  .log .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .log details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  .log details pre { margin: 4px 0 0; white-space: pre-wrap; font: inherit; color: var(--muted); }
+  .log mark { background: var(--accent-soft); color: inherit; border-radius: 3px; }
+  .foot { padding: 8px 16px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; }
+
+  /* Service */
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 9px 16px; margin: 0 0 16px; }
+  dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
+  .state { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+  .state .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .state.active .dot { background: var(--ok); } .state.failed .dot, .state.inactive .dot { background: var(--bad); }
+  .state.activating .dot { background: var(--warn); }
+  .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; margin-left: 6px; vertical-align: -1px; }
+  .bars i { width: 3px; background: var(--line-strong); border-radius: 1px; } .bars i.on { background: var(--ok); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+  h4 { margin: 0 0 10px; font-size: 13px; font-weight: 620; }
+  ul.pending { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  pre.out { background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 10px; margin: 10px 0 0;
+            font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; max-height: 240px; overflow: auto; }
+  pre.out:empty { display: none; }
+
+  /* Settings */
+  .tabs { display: flex; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tabs button { border: 0; background: transparent; border-radius: 0; padding: 9px 10px 10px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .tabs button[aria-selected=true] { color: var(--text); border-bottom-color: var(--accent); }
+  .tabs button.dirty::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 2px; }
+  .fields { padding: 4px 16px; }
+  .field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 16px; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .field:last-child { border-bottom: 0; }
+  .field .name { font-weight: 560; } .field .help { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  @media (max-width: 640px) { .field { grid-template-columns: 1fr; gap: 8px; } }
+  .control { display: grid; grid-template-columns: minmax(0, 1fr) 36px; align-items: center; gap: 8px; }
+  .control .switch { justify-self: end; }
+  .control input[type=text], .control input[type=number], .control input[type=password], .control select {
+    width: 100%; border: 1px solid var(--line-strong); border-radius: 9px; padding: 7px 10px; background: var(--card); font-size: 13.5px; }
+  .control input[type=number] { text-align: right; }
+  .control input:invalid { border-color: var(--bad); }
+  .control .unit { color: var(--muted); font-size: 13px; min-width: 28px; }
+  .save-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--sunken); border-radius: 0 0 var(--radius) var(--radius); }
+  .save-bar .msg { margin: 0; }
+  .save-bar .hint { color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
 <header>
+  <div class="logo" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+  </div>
   <h1>Observice</h1>
-  <span class="pill"><span class="dot" id="dot"></span><span id="state">…</span></span>
+  <span class="meta" id="host-meta"></span>
 </header>
+
 <main>
-  <section>
-    <h2>Live feed</h2>
-    <img class="feed" src="/stream.mjpg" alt="Live camera feed">
+  <section class="card" aria-label="Live feed">
+    <div class="feed-wrap" id="feed-wrap">
+      <img class="feed" src="/stream.mjpg" alt="Live camera feed">
+      <div class="overlay tl"><span class="chip" id="live-chip"><span class="dot"></span><span id="live-text">Connecting</span></span></div>
+      <div class="overlay tr"><span class="chip motion" id="motion-chip" hidden>Change detected</span></div>
+    </div>
   </section>
 
-  <div class="stack">
-    <section>
-      <h2>Service</h2>
+  <section class="card changes" aria-labelledby="changes-title">
+    <div class="card-head"><h2 id="changes-title">Changes</h2><span class="sub" id="changes-sub"></span></div>
+    <ul class="event-list" id="events"></ul>
+    <button class="more" id="more" hidden>Load older</button>
+  </section>
+
+  <section class="card" aria-labelledby="logs-title">
+    <div class="card-head">
+      <h2 id="logs-title">Logs</h2>
+      <span class="spacer"></span>
+      <div class="seg" role="group" aria-label="Log level">
+        <button data-level="all" aria-pressed="true">All</button>
+        <button data-level="warn" aria-pressed="false">Warnings</button>
+        <button data-level="error" aria-pressed="false">Errors</button>
+      </div>
+      <input class="search" id="log-search" type="search" placeholder="Search logs" aria-label="Search logs">
+      <label class="switch"><input type="checkbox" id="follow" checked> Follow</label>
+    </div>
+    <div class="logs" id="logs" role="log" aria-live="off"></div>
+    <div class="foot" id="log-foot"></div>
+  </section>
+
+  <section class="card" aria-labelledby="service-title">
+    <div class="card-head"><h2 id="service-title">Service</h2></div>
+    <div class="card-body">
       <dl>
+        <dt>Camera</dt><dd><span class="state" id="state"><span class="dot"></span><span id="state-text">–</span></span></dd>
         <dt>Running since</dt><dd id="since">–</dd>
         <dt>Restarts</dt><dd id="restarts">–</dd>
         <dt>Version</dt><dd id="commit">–</dd>
-        <dt>Wi-Fi</dt><dd><span id="wifi">–</span><meter id="wifi-meter" min="0" max="100" low="40" high="60" optimum="100" hidden></meter></dd>
+        <dt>Wi-Fi</dt><dd><span id="wifi">–</span><span class="bars" id="bars" hidden><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span></dd>
       </dl>
-      <div class="row"><button id="restart">Restart camera service</button></div>
+      <button id="restart">Restart camera service</button>
       <p class="msg" id="restart-msg" role="status"></p>
-    </section>
-
-    <section>
-      <h2>Updates</h2>
+      <hr>
+      <h4>Updates</h4>
       <div class="row">
         <button id="check">Check for updates</button>
         <button id="update" class="primary">Update &amp; restart</button>
       </div>
       <p class="msg" id="update-msg" role="status"></p>
-      <ul id="pending"></ul>
-      <pre id="update-out"></pre>
-    </section>
-  </div>
-
-  <section>
-    <h2>Logs</h2>
-    <pre id="logs" class="logpane">Loading…</pre>
+      <ul class="pending" id="pending"></ul>
+      <pre class="out" id="update-out"></pre>
+    </div>
   </section>
 
-  <section>
-    <h2>Configuration</h2>
-    <form id="config"></form>
-    <div class="row"><button id="save" class="primary" type="button">Save &amp; restart</button></div>
-    <p class="msg" id="config-msg" role="status"></p>
+  <section class="card wide" aria-labelledby="settings-title">
+    <div class="card-head"><h2 id="settings-title">Settings</h2><span class="sub">Saving restarts the camera service.</span></div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <form class="fields" id="config" novalidate></form>
+    <div class="save-bar">
+      <button class="primary" id="save" type="button" disabled>Save changes</button>
+      <button class="ghost" id="discard" type="button" hidden>Discard</button>
+      <span class="hint" id="save-hint">No unsaved changes</span>
+      <p class="msg" id="config-msg" role="status"></p>
+    </div>
   </section>
 </main>
 
+<dialog id="player" aria-labelledby="player-title">
+  <div class="dialog-head">
+    <h3 id="player-title"></h3><span class="spacer"></span>
+    <button class="ghost" id="player-close" aria-label="Close">✕</button>
+  </div>
+  <div id="player-media"></div>
+  <div class="dialog-foot">
+    <span id="player-info"></span><span class="spacer"></span>
+    <a class="button" id="player-download" download>Download</a>
+    <button class="danger" id="player-delete">Delete</button>
+  </div>
+</dialog>
+
 <script>
 const $ = id => document.getElementById(id);
-const SECRET = /password|token|webhook/;
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...children.filter(c => c != null));
+  return node;
+}
 
 async function api(path, body) {
   const opts = body === undefined ? {} : {
-    method: "POST", headers: { "X-Observice": "1", "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    method: "POST", headers: { "X-Observice": "1", "Content-Type": "application/json" }, body: JSON.stringify(body),
   };
   const res = await fetch(path, opts);
-  const data = await res.json().catch(() => ({ ok: false, output: `HTTP ${res.status}` }));
-  return data;
+  return res.json().catch(() => ({ ok: false, output: `HTTP ${res.status}` }));
 }
-
-function say(id, ok, text) {
-  $(id).className = "msg " + (ok ? "ok" : "bad");
-  $(id).textContent = text;
-}
-
+function say(id, ok, text) { $(id).className = "msg " + (ok ? "ok" : "bad"); $(id).textContent = text; }
 async function busy(button, fn) {
   button.disabled = true;
   try { await fn(); } catch (e) { console.error(e); } finally { button.disabled = false; }
 }
 
+/* ---------- time formatting ---------- */
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+function when(iso) {
+  const d = new Date(iso), now = new Date(), yesterday = new Date(now - 864e5);
+  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  if (sameDay(d, now)) return `Today, ${time}`;
+  if (sameDay(d, yesterday)) return `Yesterday, ${time}`;
+  return d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) + `, ${time}`;
+}
+function duration(s) {
+  if (s == null) return "";
+  return s < 60 ? `${s} s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} min`;
+}
+
+/* ---------- status ---------- */
+let serviceState = "";
 async function refreshStatus() {
   try {
     const s = await api("/api/status");
-    $("state").textContent = s.state || "unknown";
-    $("dot").className = "dot " + s.state;
-    $("since").textContent = s.since || "–";
-    $("restarts").textContent = s.restarts || "–";
+    serviceState = s.state;
+    $("state").className = "state " + s.state;
+    $("state-text").textContent = s.state === "active" ? "Running" : (s.state || "unknown");
+    const since = (s.since || "").match(/(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/);  // systemd: "Sat 2026-11-28 16:14:52 CET"
+    $("since").textContent = since ? when(`${since[1]}T${since[2]}`) : (s.since || "–");
+    $("restarts").textContent = s.restarts || "0";
     $("commit").textContent = s.commit || "–";
+    $("host-meta").textContent = [s.host, s.commit].filter(Boolean).join(" · ");
     const w = s.wifi;
-    $("wifi").textContent = w ? `${w.ssid} · ${w.signal}%${w.dbm != null ? ` (${w.dbm} dBm)` : ""}` : "not connected";
-    $("wifi-meter").hidden = !w;
-    if (w) $("wifi-meter").value = w.signal;
-    const logs = $("logs"), atBottom = logs.scrollHeight - logs.scrollTop - logs.clientHeight < 40;
-    logs.textContent = s.logs || "(no log output)";
-    if (atBottom) logs.scrollTop = logs.scrollHeight;
+    $("wifi").textContent = w ? `${w.ssid} · ${w.signal}%` : "Not connected";
+    $("bars").hidden = !w;
+    if (w) [...$("bars").children].forEach((bar, i) => bar.classList.toggle("on", w.signal > i * 25));
   } catch {
-    $("state").textContent = "panel unreachable";
-    $("dot").className = "dot failed";
+    serviceState = "unreachable";
+    $("state").className = "state failed";
+    $("state-text").textContent = "Panel unreachable";
   }
+  const live = serviceState === "active";
+  $("live-chip").classList.toggle("live", live);
+  $("live-text").textContent = live ? "Live" : "Offline";
 }
 
-async function loadConfig() {
-  const config = await api("/api/config");
-  const form = $("config");
-  form.replaceChildren();
-  for (const [section, values] of Object.entries(config)) {
-    const fs = document.createElement("details");
-    fs.innerHTML = `<summary>${section}</summary>`;
-    for (const [key, value] of Object.entries(values)) {
-      const label = document.createElement("label");
-      const input = document.createElement("input");
-      input.dataset.section = section;
-      input.dataset.key = key;
-      if (typeof value === "boolean") {
-        input.type = "checkbox"; input.checked = value; input.dataset.kind = "bool";
-      } else if (typeof value === "number") {
-        input.type = "number"; input.step = "any"; input.value = value; input.dataset.kind = "number";
-      } else if (Array.isArray(value)) {
-        input.type = "text"; input.value = value.join(", "); input.dataset.kind = "list";
-        input.placeholder = "comma-separated IDs";
-      } else {
-        input.type = SECRET.test(key) ? "password" : "text"; input.value = value; input.dataset.kind = "text";
-        input.autocomplete = "off";
-      }
-      label.append(Object.assign(document.createElement("span"), { textContent: key.replaceAll("_", " ") }), input);
-      fs.append(label);
-    }
-    form.append(fs);
+/* ---------- changes ---------- */
+let events = [];
+async function refreshEvents() {
+  const { events: page = [] } = await api("/api/events");
+  const oldest = page.at(-1)?.id;
+  events = page.concat(oldest ? events.filter(e => e.id < oldest) : []);
+  if (page.length === 20 && events.length === page.length) $("more").hidden = false;
+  if (page.length < 20) $("more").hidden = true;
+  renderEvents();
+}
+$("more").onclick = e => busy(e.target, async () => {
+  const { events: older = [] } = await api("/api/events?before=" + encodeURIComponent(events.at(-1).id));
+  events = events.concat(older);
+  $("more").hidden = older.length < 20;
+  renderEvents();
+});
+function renderEvents() {
+  const ongoing = events.find(e => e.end === null);
+  $("motion-chip").hidden = !ongoing;
+  const today = events.filter(e => sameDay(new Date(e.start), new Date())).length;
+  $("changes-sub").textContent = today ? `${today} today` : "";
+  const list = $("events");
+  if (!events.length) {
+    list.replaceChildren(el("li", { className: "empty", textContent: "No changes yet. They show up here as soon as something moves." }));
+    return;
   }
+  list.replaceChildren(...events.map(e => el("li", {},
+    el("button", { className: "event", onclick: () => openEvent(e), ariaLabel: `Open change from ${when(e.start)}` },
+      el("div", { className: "thumb" },
+        el("img", { src: `/recordings/${e.id}.jpg?${e.peak_percent}`, alt: "", loading: "lazy", onerror() { this.remove(); } }),
+        e.has_clip ? el("div", { className: "play", innerHTML: '<span><svg width="10" height="12" viewBox="0 0 10 12"><path d="M0 0l10 6-10 6z" fill="#fff"/></svg></span>' }) : null),
+      el("div", {},
+        el("div", { className: "when" }, el("span", { textContent: when(e.start) }), e.end === null ? el("span", { className: "tag", textContent: "LIVE" }) : null),
+        el("div", { className: "what", textContent: [e.end === null ? "In progress" : duration(e.duration), `${e.peak_percent}% of the picture changed`].join(" · ") }))))));
 }
 
-function readConfig() {
-  const config = {};
-  for (const input of $("config").querySelectorAll("input")) {
-    const { section, key, kind } = input.dataset;
-    let value = input.value;
-    if (kind === "bool") value = input.checked;
-    else if (kind === "number") value = Number(value);
-    else if (kind === "list") value = value.split(",").map(v => v.trim()).filter(Boolean).map(Number);
-    (config[section] ??= {})[key] = value;
-  }
-  return config;
+let current = null;
+function openEvent(e) {
+  current = e;
+  $("player-title").textContent = when(e.start);
+  const media = e.has_clip
+    ? el("video", { src: `/recordings/${e.id}.mp4`, poster: `/recordings/${e.id}.jpg`, controls: true, autoplay: true, playsInline: true })
+    : el("img", { className: "still", src: `/recordings/${e.id}.jpg`, alt: "Snapshot of the change" });
+  $("player-media").replaceChildren(media);
+  $("player-info").textContent = e.end === null ? "Still in progress, the clip is saved when it ends."
+    : `${duration(e.duration)} · ${e.peak_percent}% of the picture changed${e.has_clip ? "" : " · no clip recorded"}`;
+  $("player-download").href = e.has_clip ? `/recordings/${e.id}.mp4` : `/recordings/${e.id}.jpg`;
+  $("player-download").download = `observice-${e.id}.${e.has_clip ? "mp4" : "jpg"}`;
+  $("player").showModal();
 }
-
-$("save").onclick = e => busy(e.target, async () => {
-  const r = await api("/api/config", readConfig());
-  say("config-msg", r.ok, r.output);
-  refreshStatus();
+$("player-close").onclick = () => $("player").close();
+$("player").addEventListener("close", () => $("player-media").replaceChildren());
+$("player").addEventListener("click", e => { if (e.target === $("player")) $("player").close(); });
+$("player-delete").onclick = e => busy(e.target, async () => {
+  if (!confirm("Delete this change, its snapshot and clip?")) return;
+  await api("/api/events/delete", { id: current.id });
+  events = events.filter(x => x.id !== current.id);
+  $("player").close();
+  renderEvents();
 });
 
+/* ---------- logs ---------- */
+let logEntries = [], logLevel = "all", logKey = "";
+const LEVELS = { all: () => true, warn: l => l !== "INFO" && l !== "DEBUG", error: l => l === "ERROR" || l === "CRITICAL" };
+async function refreshLogs() {
+  const { entries = [] } = await api("/api/logs");
+  const key = entries.length + (entries.at(-1)?.time ?? "") + (entries.at(-1)?.message ?? "");
+  if (key === logKey) return;
+  logKey = key;
+  logEntries = entries;
+  renderLogs();
+}
+function highlight(text, q) {
+  if (!q) return [document.createTextNode(text)];
+  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "i"));
+  return parts.map((p, i) => i % 2 ? el("mark", { textContent: p }) : document.createTextNode(p));
+}
+function renderLogs() {
+  const q = $("log-search").value.trim();
+  const shown = logEntries.filter(e => LEVELS[logLevel](e.level) && (!q || e.message.toLowerCase().includes(q.toLowerCase())));
+  const box = $("logs");
+  box.replaceChildren(...shown.map(e => {
+    const [first, ...rest] = e.message.split("\n");
+    const date = new Date(e.time.replace(" ", "T"));
+    return el("div", { className: "log " + e.level },
+      el("time", { dateTime: e.time, title: e.time, textContent: sameDay(date, new Date()) ? e.time.slice(11) : e.time.slice(5, 10) + " " + e.time.slice(11, 16) }),
+      el("span", { className: "lvl", textContent: e.level === "WARNING" ? "WARN" : e.level }),
+      el("div", { className: "text" }, ...highlight(first, q),
+        rest.length ? el("details", {}, el("summary", { textContent: `${rest.length} more line${rest.length > 1 ? "s" : ""}` }), el("pre", {}, ...highlight(rest.join("\n"), q))) : null));
+  }));
+  if (!shown.length) box.replaceChildren(el("div", { className: "empty", textContent: logEntries.length ? "No log entries match." : "No log entries yet." }));
+  $("log-foot").textContent = `${shown.length} of ${logEntries.length} entries`;
+  if ($("follow").checked) box.scrollTop = box.scrollHeight;
+}
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  logLevel = b.dataset.level;
+  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderLogs();
+});
+$("log-search").oninput = renderLogs;
+$("follow").onchange = () => { if ($("follow").checked) $("logs").scrollTop = $("logs").scrollHeight; };
+$("logs").addEventListener("wheel", e => { if (e.deltaY < 0) $("follow").checked = false; });
+
+/* ---------- service ---------- */
 $("restart").onclick = e => busy(e.target, async () => {
   const r = await api("/api/restart", {});
   say("restart-msg", r.ok, r.ok ? "Camera service restarted." : r.output);
   refreshStatus();
 });
-
 $("check").onclick = e => busy(e.target, async () => {
   const r = await api("/api/updates");
-  $("pending").replaceChildren(...(r.pending || []).map(c => Object.assign(document.createElement("li"), { textContent: c })));
+  $("pending").replaceChildren(...(r.pending || []).map(c => el("li", { textContent: c })));
   if (!r.ok) say("update-msg", false, r.output);
-  else say("update-msg", true, r.pending.length ? `${r.latest} available (${r.pending.length} new commit(s)).` : "Up to date.");
+  else say("update-msg", true, r.pending.length ? `${r.latest} available (${r.pending.length} new commit${r.pending.length > 1 ? "s" : ""}).` : "Up to date.");
 });
-
 $("update").onclick = e => busy(e.target, async () => {
   if (!confirm("Update to the latest release and restart Observice?")) return;
   say("update-msg", true, "Updating… this can take a minute.");
   const r = await api("/api/update", {});
   $("update-out").textContent = r.output;
-  say("update-msg", r.ok, r.ok ? "Updated. The panel restarts itself — reloading shortly." : "Update failed, see output.");
+  say("update-msg", r.ok, r.ok ? "Updated. The panel restarts itself, reloading shortly." : "Update failed, see output.");
   if (r.ok) setTimeout(() => location.reload(), 4000);
 });
 
-loadConfig().catch(() => say("config-msg", false, "Could not load config."));
-refreshStatus();
+/* ---------- settings (rendered from the schema in observice/config.py) ---------- */
+let schema = [], saved = {}, activeTab = null;
+async function loadConfig() {
+  const r = await api("/api/config");
+  schema = r.schema; saved = r.values;
+  activeTab ??= schema[0].key;
+  renderConfig();
+}
+function control(id, f, value) {
+  if (f.type === "bool") return el("input", { type: "checkbox", id, checked: value });
+  if (f.options) return el("select", { id }, ...f.options.map(o => el("option", { value: o, textContent: o + (f.unit?.length < 3 ? f.unit : ""), selected: o === value })));
+  if (f.type === "int" || f.type === "float") return el("input", { type: "number", id, value, step: f.type === "int" ? 1 : "any", min: f.min ?? "", max: f.max ?? "", required: true });
+  if (f.type === "list") return el("input", { type: "text", id, value: value.join(", "), placeholder: "e.g. 123456789012345678", autocomplete: "off" });
+  return el("input", { type: f.secret ? "password" : "text", id, value, autocomplete: "off", spellcheck: false });
+}
+function renderConfig() {
+  $("tabs").replaceChildren(...schema.map(s => el("button", {
+    type: "button", role: "tab", textContent: s.label, ariaSelected: String(s.key === activeTab),
+    className: isDirty(s.key) ? "dirty" : "", onclick: () => { activeTab = s.key; renderConfig(); },
+  })));
+  const section = schema.find(s => s.key === activeTab);
+  $("config").replaceChildren(...section.fields.map(f => {
+    const value = (pending[section.key] ?? {})[f.key] ?? saved[section.key][f.key];
+    const input = control(`f-${section.key}-${f.key}`, f, value);
+    input.dataset.section = section.key; input.dataset.key = f.key; input.dataset.kind = f.type;
+    input.addEventListener(f.type === "bool" || f.options ? "change" : "input", onEdit);
+    const ctl = f.type === "bool" ? el("label", { className: "switch" }, input) : input;
+    return el("div", { className: "field" },
+      el("label", { htmlFor: input.id }, el("div", { className: "name", textContent: f.label }), f.help ? el("div", { className: "help", textContent: f.help }) : null),
+      el("div", { className: "control" }, ctl, el("span", { className: "unit", textContent: f.unit && !f.options && f.type !== "bool" ? f.unit : "" })));
+  }));
+  updateSaveBar();
+}
+let pending = {};
+function readInput(input) {
+  const { kind } = input.dataset;
+  if (kind === "bool") return input.checked;
+  if (kind === "int" || kind === "float") return input.value === "" ? NaN : Number(input.value);
+  if (kind === "list") return input.value.split(",").map(v => v.trim()).filter(Boolean).map(Number);
+  if (input.tagName === "SELECT") return Number.isNaN(Number(input.value)) ? input.value : Number(input.value);
+  return input.value;
+}
+function onEdit(e) {
+  const { section, key } = e.target.dataset;
+  const value = readInput(e.target);
+  (pending[section] ??= {})[key] = value;
+  if (JSON.stringify(value) === JSON.stringify(saved[section][key])) delete pending[section][key];
+  if (!Object.keys(pending[section]).length) delete pending[section];
+  [...$("tabs").children].forEach((b, i) => b.className = isDirty(schema[i].key) ? "dirty" : "");
+  updateSaveBar();
+}
+const isDirty = section => !!pending[section];
+function updateSaveBar() {
+  const n = Object.values(pending).reduce((sum, s) => sum + Object.keys(s).length, 0);
+  $("save").disabled = !n;
+  $("discard").hidden = !n;
+  $("save-hint").textContent = n ? `${n} unsaved change${n > 1 ? "s" : ""}` : "No unsaved changes";
+}
+$("discard").onclick = () => { pending = {}; $("config-msg").textContent = ""; renderConfig(); };
+$("save").onclick = e => busy(e.target, async () => {
+  const merged = structuredClone(saved);
+  for (const [s, fields] of Object.entries(pending)) Object.assign(merged[s], fields);
+  const r = await api("/api/config", merged);
+  say("config-msg", r.ok, r.output);
+  if (r.ok) { pending = {}; await loadConfig(); refreshStatus(); }
+  else updateSaveBar();
+});
+
+/* ---------- keep the changes list as tall as the feed ---------- */
+new ResizeObserver(([entry]) => document.documentElement.style.setProperty("--feed-h", entry.contentRect.height + "px")).observe($("feed-wrap"));
+
+loadConfig().catch(() => say("config-msg", false, "Could not load settings."));
+refreshStatus(); refreshEvents(); refreshLogs();
 setInterval(refreshStatus, 5000);
+setInterval(refreshEvents, 5000);
+setInterval(refreshLogs, 3000);
 </script>
 </body>
 </html>

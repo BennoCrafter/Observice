@@ -41,9 +41,9 @@ ENTITIES = [
     },
     {
         "component": "number",
-        "object_id": "check_interval",
-        "name": "Motion Check Interval",
-        "extra": {"min": 5, "max": 3600, "unit_of_measurement": "s"},
+        "object_id": "quiet_seconds",
+        "name": "Motion Cooldown",
+        "extra": {"min": 1, "max": 600, "unit_of_measurement": "s"},
         "settable": True,
     },
 ]
@@ -63,9 +63,9 @@ FIELD_MAP = {
         lambda c: _bool_str(c.discord.enabled),
         lambda c, payload: setattr(c.discord, "enabled", payload == "ON"),
     ),
-    "check_interval": (
-        lambda c: str(c.motion.check_interval),
-        lambda c, payload: setattr(c.motion, "check_interval", int(payload)),
+    "quiet_seconds": (
+        lambda c: str(c.motion.quiet_seconds),
+        lambda c, payload: setattr(c.motion, "quiet_seconds", int(float(payload))),  # HA sends "10.0"
     ),
 }
 

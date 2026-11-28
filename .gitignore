@@ -1,5 +1,6 @@
 # Observice Related
 SavedImages/
+recordings/
 .DS_Store
 assets/config.yaml
 logs
